@@ -14,4 +14,16 @@ optimizer="NSGA-II"
 study_name="NSGA-II Tuning - $dataset"
 
 srun nix-shell $JOB_DIR/slurm/default.nix --command "PYTHONPATH=$JOB_DIR/$PYTHONPATH \
-python $JOB_DIR/$experiment -p $dataset -j $SLURM_JOB_ID -o $optimizer"
+python $JOB_DIR/$experiment -p airfoil_self_noise -j $SLURM_JOB_ID -o $optimizer"
+
+srun nix-shell $JOB_DIR/slurm/default.nix --command "PYTHONPATH=$JOB_DIR/$PYTHONPATH \
+python $JOB_DIR/$experiment -p concrete_strength -j $SLURM_JOB_ID -o $optimizer"
+
+srun nix-shell $JOB_DIR/slurm/default.nix --command "PYTHONPATH=$JOB_DIR/$PYTHONPATH \
+python $JOB_DIR/$experiment -p combined_cycle_power_plant -j $SLURM_JOB_ID -o $optimizer"
+
+srun nix-shell $JOB_DIR/slurm/default.nix --command "PYTHONPATH=$JOB_DIR/$PYTHONPATH \
+python $JOB_DIR/$experiment -p protein_structure -j $SLURM_JOB_ID -o $optimizer"
+
+srun nix-shell $JOB_DIR/slurm/default.nix --command "PYTHONPATH=$JOB_DIR/$PYTHONPATH \
+python $JOB_DIR/$experiment -p parkinson_total -j $SLURM_JOB_ID -o $optimizer"

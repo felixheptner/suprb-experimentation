@@ -62,7 +62,7 @@ def run(problem: str, job_id: str, optimizer: str):
             origin_generation=origin.SquaredError(),
         ),
         solution_composition=opt_dict[optimizer](n_iter=32, population_size=32),
-        n_iter=2,
+        n_iter=32,
         n_rules=4,
         verbose=10,
         logger=CombinedLogger(
