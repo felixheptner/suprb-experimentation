@@ -8,6 +8,7 @@ from sklearn.base import BaseEstimator
 from suprb import SupRB
 from suprb.logging.combination import CombinedLogger
 from suprb.logging.default import DefaultLogger
+from suprb.logging.multi_objective import MOLogger
 
 from experiments import Experiment
 
@@ -146,6 +147,8 @@ def log_run(estimator: BaseEstimator):
             for step, value in values.items():
                 mlflow.log_metric(key=key, value=value, step=step)
 
+        if isinstance(logger, MOLogger):
+            try_log_dict(logger.pareto_fronts_, "pareto_fronts.json")
 
 def log_run_result(result: dict):
     mlflow.log_metrics(result)

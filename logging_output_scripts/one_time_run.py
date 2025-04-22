@@ -219,13 +219,17 @@ adel = {"SupRB": "SupRB",
         "Random Forest": "RF",
         "Decision Tree": "DT", }
 
+moo = {
+    "SupRB": "SupRB"
+}
+
 
 def run_main():
     with open("logging_output_scripts/config.json", "r") as f:
         config = json.load(f)
 
-    # config["datasets"] = {"":""}
-    config["datasets"] = datasets
+    config["datasets"] = {"airfoil_self_noise": "Airfoil Self-Noise"}
+    # config["datasets"] = datasets
     if setting[0] == "diss-graphs/graphs/SAGA":
         config["datasets"] = saga_datasets
     if setting[0] == "diss-graphs/graphs/MIX" or setting[0] == "diss-graphs/graphs/RBML":
@@ -253,7 +257,7 @@ def run_main():
         filter_runs(all_runs_df)
 
     create_plots()
-    calvo(ylabel=setting[2])
+    #calvo(ylabel=setting[2])
 
     if setting[0] == "diss-graphs/graphs/RBML":
         ttest(latex=False, cand1="XCSF", cand2="ES Tuning", cand1_name="XCSF", cand2_name="SupRB")
@@ -330,8 +334,8 @@ if __name__ == '__main__':
     mix_calvo_sub = ["diss-graphs/graphs/MIX/subset", mixing_calvo_subset, "Mixing Variant", True, "mlruns_csv/MIX"]
     sagas = ["diss-graphs/graphs/SAGA", saga, "Solution Composition", False, "mlruns_csv/SAGA"]
     sc_rd = ["diss-graphs/graphs/SC", sc_mix_rd, "Solution Composition", False, "mlruns_csv/SC"]
-
-    # mlruns_to_csv(datasets, "MIX", True)
+    moo = ["diss-graphs/graphs/MOO", moo, "Solution Composition", True, "mlruns_csv/MOO"]
+    mlruns_to_csv(datasets, "MOO", True)
 
     # setting = rd
     # setting = sc
@@ -339,7 +343,8 @@ if __name__ == '__main__':
     # setting = mix_calvo
     # setting = mix_calvo_sub
     # setting = xcsf
-    setting = sc_rd
+    # setting = sc_rd
+    setting = moo
 
     run_main()
     exit()
