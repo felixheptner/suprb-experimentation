@@ -46,5 +46,5 @@ srun nix-shell "${JOB_DIR}/slurm/default.nix" --command "
   python ${JOB_DIR}/${EXPERIMENT} \
     -p ${dataset} \
     -j ${SLURM_ARRAY_JOB_ID} \
-    -o ${OPTIMIZER} \"
+    -o ${OPTIMIZER} \
 "
