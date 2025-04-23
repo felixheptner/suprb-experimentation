@@ -32,6 +32,7 @@ opt_dict = {"NSGA-II": nsga2.NonDominatedSortingGeneticAlgorithm2,
             "NSGA-III": nsga3.NonDominatedSortingGeneticAlgorithm3,
             "SPEA2": spea2.StrengthParetoEvolutionaryAlgorithm2}
 
+
 def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
     method_name = f"load_{name}"
     from problems import datasets
@@ -101,13 +102,56 @@ def run(problem: str, job_id: str, optimizer: str):
         params.solution_composition__mutation__mutation_rate = trial.suggest_float(
             'solution_composition__mutation_rate', 0, 0.1)
 
+    @param_space()
+    def suprb_ES_NSGA3_space(trial: Trial, params: Bunch):
+        # ES
+        sigma_space = [0, np.sqrt(X.shape[1])]
+
+        params.rule_discovery__mutation__sigma = trial.suggest_float('rule_discovery__mutation__sigma', *sigma_space)
+        params.rule_discovery__init__fitness__alpha = trial.suggest_float(
+            'rule_discovery__init__fitness__alpha', 0.01, 0.2)
+
+        # SC
+        params.solution_composition__crossover = trial.suggest_categorical(
+            'solution_composition__crossover', ['NPoint', 'Uniform'])
+        params.solution_composition__crossover = getattr(nsga3.crossover, params.solution_composition__crossover)()
+
+        if isinstance(params.solution_composition__crossover, nsga3.crossover.NPoint):
+            params.solution_composition__crossover__n = trial.suggest_int('solution_composition__crossover__n', 1, 10)
+
+        params.solution_composition__mutation__mutation_rate = trial.suggest_float(
+            'solution_composition__mutation_rate', 0, 0.1)
+
+    @param_space()
+    def suprb_ES_SPEA2_space(trial: Trial, params: Bunch):
+        # ES
+        sigma_space = [0, np.sqrt(X.shape[1])]
+
+        params.rule_discovery__mutation__sigma = trial.suggest_float('rule_discovery__mutation__sigma', *sigma_space)
+        params.rule_discovery__init__fitness__alpha = trial.suggest_float(
+            'rule_discovery__init__fitness__alpha', 0.01, 0.2)
+
+        # SC
+        params.solution_composition__crossover = trial.suggest_categorical(
+            'solution_composition__crossover', ['NPoint', 'Uniform'])
+        params.solution_composition__crossover = getattr(spea2.crossover, params.solution_composition__crossover)()
+
+        if isinstance(params.solution_composition__crossover, spea2.crossover.NPoint):
+            params.solution_composition__crossover__n = trial.suggest_int('solution_composition__crossover__n', 1, 10)
+
+        params.solution_composition__mutation__mutation_rate = trial.suggest_float(
+            'solution_composition__mutation_rate', 0, 0.1)
+
+    space_dict = {"NSGA-II": suprb_ES_NSGA2_space,
+                  "NSGA-III": suprb_ES_NSGA3_space,
+                  "SPEA2": suprb_ES_SPEA2_space}
 
     experiment_name = (f'{optimizer} Tuning j:{job_id} p:{problem}')
     print(experiment_name)
     experiment = Experiment(name=experiment_name,  verbose=10)
 
     tuner = OptunaTuner(X_train=X, y_train=y, **tuning_params)
-    experiment.with_tuning(suprb_ES_NSGA2_space, tuner=tuner)
+    experiment.with_tuning(space_dict[optimizer], tuner=tuner)
 
     random_states = np.random.SeedSequence(random_state).generate_state(8)
     experiment.with_random_states(random_states, n_jobs=8)
