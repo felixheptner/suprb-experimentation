@@ -20,8 +20,9 @@
 # ---------------------------------------------------------------------------
 JOB_DIR=/data/oc-compute03/$USER/suprb-experimentation
 export PYTHONPATH="${PYTHONPATH}:${JOB_DIR}"
-EXPERIMENT="runs/moo_sc_comparison_tests/simple_moo_tuning.py"
+EXPERIMENT="runs/moo_sc_comparison_tests/sampler_comparison.py"
 OPTIMIZER="NSGA-III"
+SAMPLER="uniform"
 
 # ---------------------------------------------------------------------------
 # 2. Map array‑task ID → dataset name
@@ -44,6 +45,7 @@ echo "[$(date)] Tuning optimizer '${OPTIMIZER}' on dataset '${dataset}' (array t
 
 srun nix-shell "${JOB_DIR}/slurm/default.nix" --command "
   python ${JOB_DIR}/${EXPERIMENT} \
+    -s ${SAMPLER}
     -p ${dataset} \
     -j ${SLURM_ARRAY_JOB_ID} \
     -o ${OPTIMIZER} \
