@@ -9,6 +9,8 @@ from sklearn.preprocessing import MinMaxScaler
 
 mse = "metrics.test_neg_mean_squared_error"
 complexity = "metrics.elitist_complexity"
+hypervolume = "metrics.hypervolume"
+spread = "metrics.spread"
 
 
 def create_plots():
@@ -87,14 +89,15 @@ def create_plots():
             plt.yticks(y_tick_positions, [f'{x:.3g}' for x in y_tick_positions])
 
         ################### MSE ###########################
-        plots = {  # "violin": sns.violinplot,
+        plots = {  "violin": sns.violinplot,
             "swarm": sns.swarmplot,
-            #  "box": sns.boxplot
+            #"box": sns.boxplot
         }
 
         y_axis_label = {"MSE": mse,
                         "Complexity": complexity
                         }
+        y_axis_label = config['metrics']
 
         f_index = heuristic.find('f:')
         result = heuristic[f_index+2:]
@@ -106,7 +109,7 @@ def create_plots():
                 ax = function(x='Used_Representation', y=y_axis, data=res_var, size=3)
                 ax_config(ax, y_label)
 
-                fig.savefig(f"{final_output_dir}/{name}_{datasets_map[problem]}_{y_label}.png")
+                fig.savefig(f"{final_output_dir}/{datasets_map[problem]}_{name}_{y_label}.png")
                 plt.close(fig)
 
         if config["data_directory"] == "mlruns_csv/MIX":

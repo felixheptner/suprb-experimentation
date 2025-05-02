@@ -4,7 +4,8 @@ import mlflow
 import numpy as np
 import time
 
-from logging_output_scripts.violin_and_swarm_plots import create_plots
+from logging_output_scripts import violin_and_swarm_plots
+from logging_output_scripts import moo_plots
 from logging_output_scripts.summary_csv import create_summary_csv
 from logging_output_scripts.stat_analysis import calvo, ttest
 from logging_output_scripts.latex_tabulars import write_complexity_all
@@ -191,14 +192,17 @@ mixing.append(mixing12)
 def mlruns_to_csv(datasets, subdir, normalize):
     all_runs_df = mlflow.search_runs(search_all_experiments=True)
 
+    print("Dataset\t\t\tMin MSE\tMax MSE\tMin Complexity\tMax Complexity")
     for dataset in datasets:
         mse = "metrics.test_neg_mean_squared_error"
         complexity = "metrics.elitist_complexity"
-
+        hypervolume = "metrics.hypervolume"
+        spread = "metrics.spread"
         df = all_runs_df[all_runs_df["tags.mlflow.runName"].str.contains(
             dataset, case=False, na=False) & (all_runs_df["tags.fold"] == 'True')]
-        df = df[["tags.mlflow.runName", mse, complexity]]
-        print(dataset, np.min(df[mse]), np.max(df[mse]), np.min(df[complexity]), np.max(df[complexity]))
+        df = df[["tags.mlflow.runName", "artifact_uri", mse, complexity, hypervolume, spread]]
+        print(f"{dataset}\t\t\t{np.min(df[mse]):.4f}\t{np.max(df[mse]):.4f}\t{np.min(df[complexity]):.4f}\t"
+              f"{np.max(df[complexity]):.4f}")
 
         df[mse] *= -1
         if normalize:
@@ -215,21 +219,21 @@ saga = {
     "s:sas": "SAGA4"
 }
 
+moo_solution_composition = {
+    "NSGA-II Tuning": "NSGA-II",
+    "NSGA-III Tuning": "NSGA-III",
+    "SPEA2 Tuning": "SPEA2"
+}
+
 adel = {"SupRB": "SupRB",
         "Random Forest": "RF",
         "Decision Tree": "DT", }
-
-moo = {
-    "SupRB": "SupRB"
-}
-
 
 def run_main():
     with open("logging_output_scripts/config.json", "r") as f:
         config = json.load(f)
 
-    config["datasets"] = {"airfoil_self_noise": "Airfoil Self-Noise"}
-    # config["datasets"] = datasets
+    config["datasets"] = saga_datasets
     if setting[0] == "diss-graphs/graphs/SAGA":
         config["datasets"] = saga_datasets
     if setting[0] == "diss-graphs/graphs/MIX" or setting[0] == "diss-graphs/graphs/RBML":
@@ -256,7 +260,8 @@ def run_main():
         all_runs_df = mlflow.search_runs(search_all_experiments=True)
         filter_runs(all_runs_df)
 
-    create_plots()
+    violin_and_swarm_plots.create_plots()
+    moo_plots.create_plots()
     #calvo(ylabel=setting[2])
 
     if setting[0] == "diss-graphs/graphs/RBML":
@@ -334,7 +339,8 @@ if __name__ == '__main__':
     mix_calvo_sub = ["diss-graphs/graphs/MIX/subset", mixing_calvo_subset, "Mixing Variant", True, "mlruns_csv/MIX"]
     sagas = ["diss-graphs/graphs/SAGA", saga, "Solution Composition", False, "mlruns_csv/SAGA"]
     sc_rd = ["diss-graphs/graphs/SC", sc_mix_rd, "Solution Composition", False, "mlruns_csv/SC"]
-    moo = ["diss-graphs/graphs/MOO", moo, "Solution Composition", True, "mlruns_csv/MOO"]
+    moo_algos = ["diss-graphs/graphs/MOO", moo_solution_composition, "Solution Composition", False, "mlruns_csv/MOO"]
+
     mlruns_to_csv(datasets, "MOO", True)
 
     # setting = rd
@@ -344,7 +350,7 @@ if __name__ == '__main__':
     # setting = mix_calvo_sub
     # setting = xcsf
     # setting = sc_rd
-    setting = moo
+    setting = moo_algos
 
     run_main()
     exit()
