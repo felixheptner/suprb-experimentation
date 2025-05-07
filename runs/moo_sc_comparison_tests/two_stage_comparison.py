@@ -20,8 +20,8 @@ from suprb import rule, SupRB
 from suprb.logging.combination import CombinedLogger
 from suprb.logging.multi_objective import MOLogger
 from suprb.logging.stdout import StdoutLogger
-from suprb.optimizer.solution import nsga2, nsga3, spea2
-from suprb.optimizer.rule import es, origin, mutation
+from suprb.optimizer.solution import ga, nsga2, nsga3, spea2, ts
+from suprb.optimizer.rule import es
 from suprb.optimizer.solution.sampler import BetaSolutionSampler, DiversitySolutionSampler
 
 
@@ -43,7 +43,7 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 @click.option('-p', '--problem', type=click.STRING, default='airfoil_self_noise')
 @click.option('-j', '--job_id', type=click.STRING, default='NA')
 @click.option('-o', '--optimizer', type=click.STRING, default='nsga3')
-@click.option('-s', '--sampler', type=click.STRING, default='beta')
+@click.option('-t', '--two_stage', type=click.STRING, default='ga-ga32')
 
 def run(problem: str, job_id: str, optimizer: str, sampler: str):
     print(f"Problem is {problem}, with job id {job_id} and optimizer {optimizer}")
@@ -52,11 +52,23 @@ def run(problem: str, job_id: str, optimizer: str, sampler: str):
     X, y = scale_X_y(X, y)
     X, y = shuffle(X, y, random_state=random_state)
 
-    sampler_dict = {
-        "uniform": BetaSolutionSampler(a=1.0, b=1.0, projected=False),
-        "beta": BetaSolutionSampler(a=1.5, b=1.5, projected=False),
-        "beta_projection": BetaSolutionSampler(a=1.5, b=1.5, projected=True),
-        "diversity": DiversitySolutionSampler()
+    ts_dict = {
+        "ga-ga32": ga.GeneticAlgorithm(),
+        "ga-ga64": ts.TwoStageSolutionComposition(
+            algorithm_1=ga.GeneticAlgorithm(),
+            algorithm_2=ga.GeneticAlgorithm(n_iter=64),
+            switch_iteration=32
+        ),
+        "ga-moo32": ts.TwoStageSolutionComposition(
+            algorithm_1=ga.GeneticAlgorithm(),
+            algorithm_2=opt_dict[optimizer](),
+            switch_iteration=32,
+        ),
+        "ga-moo64": ts.TwoStageSolutionComposition(
+            algorithm_1=ga.GeneticAlgorithm(),
+            algorithm_2=opt_dict[optimizer](n_iter=64),
+            switch_iteration=32
+        )
     }
 
     estimator = SupRB(
@@ -109,7 +121,7 @@ def run(problem: str, job_id: str, optimizer: str, sampler: str):
                 'solution_composition__sampler__b', 0.1, 10)
 
 
-    experiment_name = (f'{optimizer} Tuning s:{sampler} j:{job_id} p:{problem}')
+    experiment_name = (f'TSComp {optimizer} s:{sampler} j:{job_id} p:{problem}')
     print(experiment_name)
     experiment = Experiment(name=experiment_name,  verbose=10)
 

@@ -5,7 +5,6 @@ import click
 import mlflow
 from optuna import Trial
 
-import scipy.stats as stats
 from sklearn.utils import Bunch, shuffle
 from sklearn.model_selection import ShuffleSplit
 
@@ -109,7 +108,7 @@ def run(problem: str, job_id: str, optimizer: str, sampler: str):
                 'solution_composition__sampler__b', 0.1, 10)
 
 
-    experiment_name = (f'{optimizer} Tuning s:{sampler} j:{job_id} p:{problem}')
+    experiment_name = (f'SampComp {optimizer} s:{sampler} j:{job_id} p:{problem}')
     print(experiment_name)
     experiment = Experiment(name=experiment_name,  verbose=10)
 
