@@ -28,9 +28,9 @@ import suprb.solution.mixing_model as mixing_model
 
 random_state = 42
 
-opt_dict = {"NSGA-II": nsga2.NonDominatedSortingGeneticAlgorithm2,
-            "NSGA-III": nsga3.NonDominatedSortingGeneticAlgorithm3,
-            "SPEA2": spea2.StrengthParetoEvolutionaryAlgorithm2}
+opt_dict = {"nsga2": nsga2.NonDominatedSortingGeneticAlgorithm2,
+            "nsga3": nsga3.NonDominatedSortingGeneticAlgorithm3,
+            "spea2": spea2.StrengthParetoEvolutionaryAlgorithm2}
 
 
 def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
@@ -142,11 +142,11 @@ def run(problem: str, job_id: str, optimizer: str):
         params.solution_composition__mutation__mutation_rate = trial.suggest_float(
             'solution_composition__mutation_rate', 0, 0.1)
 
-    space_dict = {"NSGA-II": suprb_ES_NSGA2_space,
-                  "NSGA-III": suprb_ES_NSGA3_space,
-                  "SPEA2": suprb_ES_SPEA2_space}
+    space_dict = {"nsga2": suprb_ES_NSGA2_space,
+                  "nsga3": suprb_ES_NSGA3_space,
+                  "spea2": suprb_ES_SPEA2_space}
 
-    experiment_name = (f'{optimizer} Tuning j:{job_id} p:{problem}')
+    experiment_name = (f'{optimizer} Baseline j:{job_id} p:{problem}')
     print(experiment_name)
     experiment = Experiment(name=experiment_name,  verbose=10)
 
