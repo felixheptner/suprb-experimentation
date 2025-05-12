@@ -219,10 +219,17 @@ saga = {
     "s:sas": "SAGA4"
 }
 
-moo_solution_composition = {
-    "NSGA-II Tuning": "NSGA-II",
-    "NSGA-III Tuning": "NSGA-III",
-    "SPEA2 Tuning": "SPEA2"
+moo_baseline = {
+    "nsga2 Baseline": "NSGA-II",
+    "nsga3 Baseline": "NSGA-III",
+    "spea2 Baseline": "SPEA2"
+}
+
+moo_sampler = {
+    "uniform": "Uniform",
+    "beta": "Beta",
+    "beta_projection": "Beta Projection",
+    "diversity": "Diversity",
 }
 
 adel = {"SupRB": "SupRB",
@@ -339,18 +346,19 @@ if __name__ == '__main__':
     mix_calvo_sub = ["diss-graphs/graphs/MIX/subset", mixing_calvo_subset, "Mixing Variant", True, "mlruns_csv/MIX"]
     sagas = ["diss-graphs/graphs/SAGA", saga, "Solution Composition", False, "mlruns_csv/SAGA"]
     sc_rd = ["diss-graphs/graphs/SC", sc_mix_rd, "Solution Composition", False, "mlruns_csv/SC"]
-    moo_algos = ["diss-graphs/graphs/MOO", moo_solution_composition, "Solution Composition", False, "mlruns_csv/MOO"]
+    moo_algos = ["diss-graphs/graphs/MOO", moo_baseline, "Solution Composition", False, "mlruns_csv/MOO"]
+    moo_sampler = ["diss-graphs/graphs/SAMPLER", moo_sampler, "Solution Composition", False, "mlruns_csv/SAMPLER"]
 
-    mlruns_to_csv(datasets, "MOO", True)
+    mlruns_to_csv(datasets, "SAMPLER", True)
 
     # setting = rd
-    # setting = sc
-    # setting = sagas
+    # settinBaseline"    # setting = sagas
     # setting = mix_calvo
     # setting = mix_calvo_sub
     # setting = xcsf
     # setting = sc_rd
-    setting = moo_algos
+    # setting = moo_algos
+    setting = moo_sampler
 
     run_main()
     exit()
