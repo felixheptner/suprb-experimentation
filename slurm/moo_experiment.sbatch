@@ -22,8 +22,8 @@ JOB_DIR=/data/oc-compute03/$USER/suprb-experimentation
 export PYTHONPATH="${PYTHONPATH}:${JOB_DIR}"
 EXPERIMENT="runs/moo_sc_comparison_tests/sampler_comparison.py"
 OPTIMIZER="nsga3"
-SAMPLER="uniform"
-
+PROJECTION="false"
+SAMPLER="beta"
 # ---------------------------------------------------------------------------
 # 2. Map array‑task ID → dataset name
 # ---------------------------------------------------------------------------

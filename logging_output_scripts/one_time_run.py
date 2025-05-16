@@ -227,9 +227,10 @@ moo_baseline = {
 
 moo_sampler = {
     "uniform": "Uniform",
-    "beta": "Beta",
-    "beta_projection": "Beta Projection",
-    "diversity": "Diversity",
+    "nsga3 Baseline": r"Beta $\alpha = \beta = 1.5$",
+    "beta": "Beta Tuned",
+    #"beta_projection": "Beta Projection",
+    #"diversity": "Diversity", TODO: Wieder einkommentieren
 }
 
 adel = {"SupRB": "SupRB",

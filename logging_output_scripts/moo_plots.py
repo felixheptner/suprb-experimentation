@@ -62,8 +62,10 @@ def create_plots():
         for heuristic in pareto_fronts.keys():
             pareto_fronts[heuristic] = np.array(pareto_fronts[heuristic])
 
-        fig_kde, axes_kde = plt.subplots(1, 3, figsize=(18, 5), sharex=True, sharey=True)
-        fig_hex, axes_hex = plt.subplots(1, 3, figsize=(18, 5), sharex=True, sharey=True)
+        fig_kde, axes_kde = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
+                                         sharey=True)
+        fig_hex, axes_hex = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
+                                         sharey=True)
 
         fig_kde.suptitle(config['datasets'][problem])
         fig_hex.suptitle(config['datasets'][problem])
