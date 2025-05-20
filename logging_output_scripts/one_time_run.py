@@ -350,7 +350,7 @@ if __name__ == '__main__':
     moo_algos = ["diss-graphs/graphs/MOO", moo_baseline, "Solution Composition", False, "mlruns_csv/MOO"]
     moo_sampler = ["diss-graphs/graphs/SAMPLER", moo_sampler, "Solution Composition", False, "mlruns_csv/SAMPLER"]
 
-    mlruns_to_csv(datasets, "SAMPLER", True)
+    mlruns_to_csv(datasets, "MOO", True)
 
     # setting = rd
     # settinBaseline"    # setting = sagas
@@ -358,8 +358,8 @@ if __name__ == '__main__':
     # setting = mix_calvo_sub
     # setting = xcsf
     # setting = sc_rd
-    # setting = moo_algos
-    setting = moo_sampler
+    setting = moo_algos
+    # setting = moo_sampler
 
     run_main()
     exit()

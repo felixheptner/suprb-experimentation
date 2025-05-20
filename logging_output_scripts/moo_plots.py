@@ -16,8 +16,7 @@ spread = "metrics.spread"
 
 def create_plots():
     """
-    Uses seaborn-package to create violin-Plots comparing model performances
-    on multiple datasets
+    Creating Hexbin, Kernel density estimate, and Pareto Front cardinality histogram plots.
     """
     sns.set_style("whitegrid")
     sns.set_theme(style="whitegrid",
@@ -42,9 +41,11 @@ def create_plots():
         counter = 0
 
         pareto_fronts = {}
+        pareto_solutions = {}
 
         for heuristic, renamed_heuristic in config['heuristics'].items():
             pareto_fronts[renamed_heuristic] = []
+            pareto_solutions[renamed_heuristic] = []
             if config["data_directory"] == "mlruns":
                 fold_df = get_df(heuristic, problem)
             else:
@@ -57,25 +58,30 @@ def create_plots():
                     path = path.split("suprb-experimentation/")[-1]
                     with open(os.path.join(path, "pareto_fronts.json")) as f:
                         pf = json.load(f)
-                        pareto_fronts[renamed_heuristic].extend(pf[str(max(int(key) for key in pf.keys()))])
+                        pf = pf[str(max(int(key) for key in pf.keys()))]
+                        pareto_fronts[renamed_heuristic].append(pf)
+                        pareto_solutions[renamed_heuristic].extend(pf)
 
         for heuristic in pareto_fronts.keys():
-            pareto_fronts[heuristic] = np.array(pareto_fronts[heuristic])
+            pareto_solutions[heuristic] = np.array(pareto_solutions[heuristic])
 
-        fig_kde, axes_kde = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
-                                         sharey=True)
         fig_hex, axes_hex = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
-                                         sharey=True)
+                                         sharey=True, constrained_layout=True)
+        fig_kde, axes_kde = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
+                                         sharey=True, constrained_layout=True)
+        fig_hist, axes_hist = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
+                                         sharey=True, constrained_layout=True)
 
         fig_kde.suptitle(config['datasets'][problem])
         fig_hex.suptitle(config['datasets'][problem])
+        fig_hist.suptitle(config['datasets'][problem])
 
-        # ====== HEXBIN Plots ======
+        # ================== HEXBIN Plots ==================
 
         for i, algo in enumerate(config["heuristics"].values()):
             algo_df = pd.DataFrame({
-                "Normed Complexity": pareto_fronts[algo][:, 0],
-                "Pseudo Accuracy": pareto_fronts[algo][:, 1]
+                "Normed Complexity": pareto_solutions[algo][:, 0],
+                "Pseudo Accuracy": pareto_solutions[algo][:, 1]
             })
 
             hb = axes_hex[i].hexbin(
@@ -88,15 +94,16 @@ def create_plots():
             fig_hex.colorbar(hb, ax=axes_hex[i], label='Density')
 
         fig_hex.supylabel("Pseudo Accuracy")
-        plt.tight_layout()
+        # plt.tight_layout()
         fig_hex.savefig(f"{final_output_dir}/{datasets_map[problem]}_hex.png")
         plt.close(fig_hex)
 
-        # ====== KDE Plots ======
+        # ================== KDE Plots ==================
+
         for i, algo in enumerate(config["heuristics"].values()):
             algo_df = pd.DataFrame({
-                "Normed Complexity": pareto_fronts[algo][:, 0],
-                "Pseudo Accuracy": pareto_fronts[algo][:, 1]
+                "Normed Complexity": pareto_solutions[algo][:, 0],
+                "Pseudo Accuracy": pareto_solutions[algo][:, 1]
             })
 
 
@@ -109,9 +116,22 @@ def create_plots():
             axes_kde[i].set_xlim(0, 1)
             axes_kde[i].set_ylim(0, 1)
 
-        plt.tight_layout()
+        # plt.tight_layout()
         fig_kde.savefig(f"{final_output_dir}/{datasets_map[problem]}_kde.png")
         plt.close(fig_kde)
+
+        # ================== |Pareto Front| Histograms ==================
+
+        for i, algo in enumerate(config["heuristics"].values()):
+            pf_lengths = [len(pf) for pf in pareto_fronts[algo]]
+            axes_hist[i].hist(pf_lengths, bins=np.arange(1, 33), align='left', rwidth=0.9)
+            axes_hist[i].set_title(f"{algo}")
+            axes_hist[i].set_xlabel(f"Pareto Front Length")
+            
+        fig_hex.supylabel("Cardinalities")
+        # plt.tight_layout()
+        fig_hist.savefig((f"{final_output_dir}/{datasets_map[problem]}_hist.png"))
+        plt.close(fig_hist)
 
 
 if __name__ == '__main__':
