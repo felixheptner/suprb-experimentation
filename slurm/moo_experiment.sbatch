@@ -20,7 +20,7 @@
 # ---------------------------------------------------------------------------
 JOB_DIR=/data/oc-compute03/$USER/suprb-experimentation
 export PYTHONPATH="${PYTHONPATH}:${JOB_DIR}"
-EXPERIMENT="runs/moo_sc_comparison_tests/sampler_comparison.py"
+EXPERIMENT="runs/moo_sc_comparison_tests/early_stopping.py"
 OPTIMIZER="nsga3"
 PROJECTION="false"
 SAMPLER="beta"
@@ -45,7 +45,6 @@ echo "[$(date)] Tuning optimizer '${OPTIMIZER}' on dataset '${dataset}' (array t
 
 srun nix-shell "${JOB_DIR}/slurm/default.nix" --command "
   python ${JOB_DIR}/${EXPERIMENT} \
-    -s ${SAMPLER} \
     -p ${dataset} \
     -j ${SLURM_ARRAY_JOB_ID} \
     -o ${OPTIMIZER} \
