@@ -62,7 +62,7 @@ def run(problem: str, job_id: str, optimizer: str):
             mutation=mutation.HalfnormIncrease(),
             origin_generation=origin.SquaredError(),
         ),
-        solution_composition=opt_dict[optimizer](n_iter=128,
+        solution_composition=opt_dict[optimizer](n_iter=256,
                                                  population_size=32,
                                                  early_stopping_delta=0,
                                                  early_stopping_patience=10),
