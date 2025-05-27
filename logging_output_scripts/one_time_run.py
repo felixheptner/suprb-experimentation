@@ -197,10 +197,11 @@ def mlruns_to_csv(datasets, subdir, normalize):
         mse = "metrics.test_neg_mean_squared_error"
         complexity = "metrics.elitist_complexity"
         hypervolume = "metrics.hypervolume"
+        sc_iters = "metrics.sc_iterations"
         spread = "metrics.spread"
         df = all_runs_df[all_runs_df["tags.mlflow.runName"].str.contains(
             dataset, case=False, na=False) & (all_runs_df["tags.fold"] == 'True')]
-        df = df[["tags.mlflow.runName", "artifact_uri", mse, complexity, hypervolume, spread]]
+        df = df[["tags.mlflow.runName", "artifact_uri", mse, complexity, hypervolume, spread, sc_iters]]
         print(f"{dataset}\t\t\t{np.min(df[mse]):.4f}\t{np.max(df[mse]):.4f}\t{np.min(df[complexity]):.4f}\t"
               f"{np.max(df[complexity]):.4f}")
 
@@ -229,8 +230,17 @@ moo_sampler = {
     "uniform": "Uniform",
     "nsga3 Baseline": r"Beta $\alpha = \beta = 1.5$",
     "beta": "Beta Tuned",
-    #"beta_projection": "Beta Projection",
-    #"diversity": "Diversity", TODO: Wieder einkommentieren
+    "beta_projection": "Beta Projection",
+    "diversity": "Diversity",
+}
+
+moo_early = {
+    "nsga2 Baseline": "NSGA-II",
+    "Early Stopping nsga2": "NSGA-II ES",
+    "nsga3 Baseline": "NSGA-III",
+    "Early Stopping nsga3": "NSGA-III ES",
+    "spea2 Baseline": "SPEA2",
+    "Early Stopping spea2": "SPEA2 ES",
 }
 
 adel = {"SupRB": "SupRB",
@@ -349,8 +359,9 @@ if __name__ == '__main__':
     sc_rd = ["diss-graphs/graphs/SC", sc_mix_rd, "Solution Composition", False, "mlruns_csv/SC"]
     moo_algos = ["diss-graphs/graphs/MOO", moo_baseline, "Solution Composition", False, "mlruns_csv/MOO"]
     moo_sampler = ["diss-graphs/graphs/SAMPLER", moo_sampler, "Solution Composition", False, "mlruns_csv/SAMPLER"]
+    moo_early = ["diss-graphs/graphs/EARLY", moo_early, "Solution Composition ", False, "mlruns_csv/EARLY"]
 
-    mlruns_to_csv(datasets, "MOO", True)
+    mlruns_to_csv(datasets, "EARLY", True)
 
     # setting = rd
     # settinBaseline"    # setting = sagas
@@ -358,9 +369,9 @@ if __name__ == '__main__':
     # setting = mix_calvo_sub
     # setting = xcsf
     # setting = sc_rd
-    setting = moo_algos
+    # setting = moo_algos
     # setting = moo_sampler
-
+    setting = moo_early
     run_main()
     exit()
 

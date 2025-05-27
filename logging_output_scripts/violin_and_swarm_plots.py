@@ -71,13 +71,15 @@ def create_plots():
 
         def ax_config(axis, y_label):
             x_lab = ""
-            ax.set_ylabel(y_label, weight="bold")
+            ax.set_ylabel(y_label, weight="bold", fontsize=18)
             ax.set_title(config['datasets'][problem], style="italic", fontsize=14)
             ax.set_xlabel(x_lab, weight="bold", labelpad=10)
 
+            plt.xticks(rotation=45, ha='right', fontsize=12)
+
             # Change this to adjust y_axis ticks
             y_min = max(0, min(ax.get_yticks()))
-            y_max = min(1, max(ax.get_yticks()))
+            y_max = max(ax.get_yticks())
 
             # Change this to adjust the tick size
             num_ticks = 7
