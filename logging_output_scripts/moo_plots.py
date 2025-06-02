@@ -7,6 +7,7 @@ import json
 import os
 from utils import datasets_map
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.linear_model import LinearRegression
 
 mse = "metrics.test_neg_mean_squared_error"
 complexity = "metrics.elitist_complexity"
@@ -39,7 +40,7 @@ def create_plots():
 
     for problem in config['datasets']:
         counter = 0
-
+        first = True
         pareto_fronts = {}
         pareto_solutions = {}
 
@@ -54,6 +55,12 @@ def create_plots():
                 counter += 1
                 name = [renamed_heuristic] * fold_df.shape[0]
                 current_res = fold_df.assign(Used_Representation=name)
+                if first:
+                    first = False
+                    res_var = current_res
+                else:
+                    # Adds additional column for plotting
+                    res_var = pd.concat([res_var, current_res])
                 for path in current_res["artifact_uri"]:
                     path = path.split("suprb-experimentation/")[-1]
                     with open(os.path.join(path, "pareto_fronts.json")) as f:
@@ -71,6 +78,8 @@ def create_plots():
                                          sharey=True, constrained_layout=True)
         fig_hist, axes_hist = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
                                          sharey=True, constrained_layout=True)
+        fig_ithv, axes_ithv = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
+                                       sharey=True, constrained_layout=True)
 
         fig_kde.suptitle(config['datasets'][problem])
         fig_hex.suptitle(config['datasets'][problem])
@@ -106,7 +115,6 @@ def create_plots():
                 "Pseudo Accuracy": pareto_solutions[algo][:, 1]
             })
 
-
             sns.kdeplot(
                 data=algo_df, x='Normed Complexity', y='Pseudo Accuracy',
                 fill=True, cmap='Blues', ax=axes_kde[i],
@@ -132,6 +140,28 @@ def create_plots():
         # plt.tight_layout()
         fig_hist.savefig((f"{final_output_dir}/{datasets_map[problem]}_hist.png"))
         plt.close(fig_hist)
+
+        # ================== Iterations to Hypervolume ==================
+        for i, algo in enumerate(config["heuristics"].values()):
+            algo_df = res_var.loc[res_var["Used_Representation"] == algo]
+            iters = algo_df["metrics.sc_iterations"]
+            hv = algo_df["metrics.hypervolume"]
+            algo_df = pd.DataFrame({
+                "Iterations": iters,
+                "Hypervolume": hv
+            })
+            sns.scatterplot(data=algo_df, x="Iterations", y="Hypervolume", ax=axes_ithv[i])
+
+            # Fit regression line
+            X = algo_df["Iterations"].values.reshape(-1, 1)
+            y = algo_df["Hypervolume"].values
+            if not np.isnan(np.sum(X)):
+                reg = LinearRegression().fit(X, y)
+                axes_ithv[i].plot(X, reg.predict(X), color='red', linewidth=2)
+
+            axes_ithv[i].set_title(f"{algo}")
+        fig_ithv.savefig(f"{final_output_dir}/{datasets_map[problem]}_ithv.png")
+        plt.close(fig_kde)
 
 
 if __name__ == '__main__':

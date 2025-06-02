@@ -96,9 +96,6 @@ def create_plots():
             #"box": sns.boxplot
         }
 
-        y_axis_label = {"MSE": mse,
-                        "Complexity": complexity
-                        }
         y_axis_label = config['metrics']
 
         f_index = heuristic.find('f:')
