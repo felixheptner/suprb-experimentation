@@ -21,6 +21,7 @@ from suprb.logging.combination import CombinedLogger
 from suprb.logging.multi_objective import MOLogger
 from suprb.logging.stdout import StdoutLogger
 from suprb.optimizer.solution import ga, nsga2, nsga3, spea2, ts
+from suprb.optimizer.solution.base import MOSolutionComposition
 from suprb.optimizer.rule import es
 from suprb.optimizer.solution.sampler import BetaSolutionSampler, DiversitySolutionSampler
 
@@ -43,37 +44,31 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 @click.option('-p', '--problem', type=click.STRING, default='airfoil_self_noise')
 @click.option('-j', '--job_id', type=click.STRING, default='NA')
 @click.option('-o', '--optimizer', type=click.STRING, default='nsga3')
-@click.option('-t', '--two_stage', type=click.STRING, default='ga-ga32')
+@click.option('-c', '--config', type=click.STRING, default='ga-moo')
 
-def run(problem: str, job_id: str, optimizer: str, sampler: str, two_stage: str):
+def run(problem: str, job_id: str, optimizer: str, config: str):
     print(f"Problem is {problem}, with job id {job_id} and optimizer {optimizer}")
 
     X, y = load_dataset(name=problem, return_X_y=True)
     X, y = scale_X_y(X, y)
     X, y = shuffle(X, y, random_state=random_state)
 
-    ts_dict = {
-        "ga-ga32": ga.GeneticAlgorithm(),
-        "ga-ga64": ts.TwoStageSolutionComposition(
-            algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=ga.GeneticAlgorithm(n_iter=64),
-            switch_iteration=32
-        ),
-        "ga-moo32": ts.TwoStageSolutionComposition(
+    config_dict = {
+        "ga-moo": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
             algorithm_2=opt_dict[optimizer](),
             switch_iteration=32,
         ),
-        "ga-moo64": ts.TwoStageSolutionComposition(
+        "ga_without_tuning-moo": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
             algorithm_2=opt_dict[optimizer](n_iter=64),
-            switch_iteration=32
+            switch_iteration=32,
         )
     }
 
     estimator = SupRB(
         rule_discovery=es.ES1xLambda(),
-        solution_composition=ts_dict[two_stage],
+        solution_composition=config_dict[config],
         n_iter=32,
         n_rules=4,
         verbose=10,
@@ -102,26 +97,34 @@ def run(problem: str, job_id: str, optimizer: str, sampler: str, two_stage: str)
         params.rule_discovery__init__fitness__alpha = trial.suggest_float(
             'rule_discovery__init__fitness__alpha', 0.01, 0.2)
 
-        # SC
-        params.solution_composition__crossover = trial.suggest_categorical(
-            'solution_composition__crossover', ['NPoint', 'Uniform'])
-        params.solution_composition__crossover = getattr(nsga3.crossover, params.solution_composition__crossover)()
+        ############ Solution Composition ##############
+        ############ GA First Stage ##############
+        if config != "ga_without_tuning-moo":
+            params.solution_composition__algorithm_1__selection__k = trial.suggest_int('solution_composition__selection__k', 3, 10)
 
-        if isinstance(params.solution_composition__crossover, nsga3.crossover.NPoint):
-            params.solution_composition__crossover__n = trial.suggest_int('solution_composition__crossover__n', 1, 10)
+            params.solution_composition__algorithm_1__crossover = trial.suggest_categorical(
+                'solution_composition__algorithm_1__crossover', ['NPoint', 'Uniform'])
+            params.solution_composition__algorithm_1__crossover = getattr(ga.crossover, params.solution_composition__algorithm_1__crossover)()
 
-        params.solution_composition__mutation__mutation_rate = trial.suggest_float(
-            'solution_composition__mutation_rate', 0, 0.1)
+            if isinstance(params.solution_composition__algorithm_1__crossover, ga.crossover.NPoint):
+                params.solution_composition__algorithm_1__crossover__n = trial.suggest_int('solution_composition__crossover__n', 1, 10)
 
-        # Sampler
-        if sampler in ("beta", "beta_projection"):
-            params.solution_composition__sampler__a = trial.suggest_float(
-                'solution_composition__sampler__a', 0.1, 10)
-            params.solution_composition__sampler__b = trial.suggest_float(
-                'solution_composition__sampler__b', 0.1, 10)
+            params.solution_composition__algorithm_1__mutation_rate = trial.suggest_float(
+                'solution_composition__algorithm_1__mutation_rate', 0, 0.1)
+
+        ############## NSGA3 Second Stage ##############
+        params.solution_composition__algorithm_2__crossover = trial.suggest_categorical(
+            'solution_composition__algorithm_2__crossover', ['NPoint', 'Uniform'])
+        params.solution_composition__algorithm_2__crossover = getattr(nsga3.crossover, params.solution_composition__algorithm_2__crossover)()
+
+        if isinstance(params.solution_composition__algorithm_2__crossover, nsga3.crossover.NPoint):
+            params.solution_composition__algorithm_2__crossover__n = trial.suggest_int('solution_composition__algorithm_2__crossover__n', 1, 10)
+
+        params.solution_composition__algorithm_2__mutation_rate = trial.suggest_float(
+            'solution_composition__algorithm_2__mutation_rate', 0, 0.1)
 
 
-    experiment_name = (f'TSComp {optimizer} s:{sampler} j:{job_id} p:{problem}')
+    experiment_name = (f'TSComp {optimizer} c:{config} j:{job_id} p:{problem}')
     print(experiment_name)
     experiment = Experiment(name=experiment_name,  verbose=10)
 
