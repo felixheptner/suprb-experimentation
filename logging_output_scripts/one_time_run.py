@@ -280,7 +280,7 @@ def run_main():
 
     violin_and_swarm_plots.create_plots()
     moo_plots.create_plots()
-    #calvo(ylabel=setting[2])
+    # calvo(ylabel=setting[2])
 
     if setting[0] == "diss-graphs/graphs/RBML":
         ttest(latex=False, cand1="XCSF", cand2="ES Tuning", cand1_name="XCSF", cand2_name="SupRB")
@@ -373,8 +373,4 @@ if __name__ == '__main__':
     # setting = moo_sampler
     setting = moo_early
     run_main()
-    exit()
 
-    for mixing_num in mixing:
-        setting = ["diss-graphs/graphs/MIX", mixing_num, "Number of rules participating", True, "mlruns_csv/MIX"]
-        run_main()

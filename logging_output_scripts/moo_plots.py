@@ -84,6 +84,7 @@ def create_plots():
         fig_kde.suptitle(config['datasets'][problem])
         fig_hex.suptitle(config['datasets'][problem])
         fig_hist.suptitle(config['datasets'][problem])
+        fig_ithv.suptitle(config['datasets'][problem])
 
         # ================== HEXBIN Plots ==================
 
