@@ -59,10 +59,22 @@ def run(problem: str, job_id: str, optimizer: str, config: str):
             algorithm_2=opt_dict[optimizer](),
             switch_iteration=32,
         ),
+        "ga-moo_cold_staging": ts.TwoStageSolutionComposition(
+            algorithm_1=ga.GeneticAlgorithm(),
+            algorithm_2=opt_dict[optimizer](),
+            switch_iteration=32,
+            warm_start=False,
+        ),
         "ga_without_tuning-moo": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
             algorithm_2=opt_dict[optimizer](n_iter=64),
             switch_iteration=32,
+        ),
+        "ga_without_tuning-moo_cold_staging": ts.TwoStageSolutionComposition(
+            algorithm_1=ga.GeneticAlgorithm(),
+            algorithm_2=opt_dict[optimizer](n_iter=64),
+            switch_iteration=32,
+            warm_start=False,
         )
     }
 
