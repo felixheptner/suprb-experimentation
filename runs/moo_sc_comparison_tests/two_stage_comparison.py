@@ -45,34 +45,37 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 @click.option('-j', '--job_id', type=click.STRING, default='NA')
 @click.option('-o', '--optimizer', type=click.STRING, default='nsga3')
 @click.option('-c', '--config', type=click.STRING, default='ga-moo')
+@click.option('-e', '--early-stopping', type=click.BOOL, default=False)
 
-def run(problem: str, job_id: str, optimizer: str, config: str):
+def run(problem: str, job_id: str, optimizer: str, config: str, early_stopping: bool):
     print(f"Problem is {problem}, with job id {job_id} and optimizer {optimizer}")
 
     X, y = load_dataset(name=problem, return_X_y=True)
     X, y = scale_X_y(X, y)
     X, y = shuffle(X, y, random_state=random_state)
 
+    sc_iter = 1000 if early_stopping else 32
+
     config_dict = {
         "ga-moo": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=opt_dict[optimizer](),
+            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=0, early_stopping_patience=20),
             switch_iteration=32,
         ),
         "ga-moo_cold_staging": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=opt_dict[optimizer](),
+            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=0, early_stopping_patience=20),
             switch_iteration=32,
             warm_start=False,
         ),
         "ga_without_tuning-moo": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=opt_dict[optimizer](n_iter=64),
+            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=0, early_stopping_patience=20),
             switch_iteration=32,
         ),
         "ga_without_tuning-moo_cold_staging": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=opt_dict[optimizer](n_iter=64),
+            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=0, early_stopping_patience=20),
             switch_iteration=32,
             warm_start=False,
         )
@@ -136,7 +139,7 @@ def run(problem: str, job_id: str, optimizer: str, config: str):
             'solution_composition__algorithm_2__mutation_rate', 0, 0.1)
 
 
-    experiment_name = (f'TSComp {optimizer} c:{config} j:{job_id} p:{problem}')
+    experiment_name = (f'TSComp {optimizer} c:{config} e:{early_stopping} j:{job_id} p:{problem}')
     print(experiment_name)
     experiment = Experiment(name=experiment_name,  verbose=10)
 

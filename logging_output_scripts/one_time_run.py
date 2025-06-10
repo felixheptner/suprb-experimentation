@@ -220,10 +220,17 @@ saga = {
     "s:sas": "SAGA4"
 }
 
+ga_baseline = {
+    "Baseline c:ga_no_tuning": "No Tuning",
+    "Baseline c:ga32": "GA 32",
+    "Baseline c:ga64": "GA 64",
+}
+
 moo_baseline = {
+    "Baseline c:ga_32": "GA",
     "nsga2 Baseline": "NSGA-II",
     "nsga3 Baseline": "NSGA-III",
-    "spea2 Baseline": "SPEA2"
+    "spea2 Baseline": "SPEA2",
 }
 
 moo_sampler = {
@@ -241,6 +248,12 @@ moo_early = {
     "Early Stopping nsga3": "NSGA-III ES",
     "spea2 Baseline": "SPEA2",
     "Early Stopping spea2": "SPEA2 ES",
+}
+
+moo_ts = {
+    "nsga3 Baseline": "NSGA-III",
+    "TSComp nsga3 c:ga-moo": "GA - NSGA-III",
+    "TSComp nsga3 c:ga_without_tuning-moo": "GA Untuned - NSGA-III",
 }
 
 adel = {"SupRB": "SupRB",
@@ -278,8 +291,8 @@ def run_main():
         all_runs_df = mlflow.search_runs(search_all_experiments=True)
         filter_runs(all_runs_df)
 
-    violin_and_swarm_plots.create_plots()
     moo_plots.create_plots()
+    violin_and_swarm_plots.create_plots()
     # calvo(ylabel=setting[2])
 
     if setting[0] == "diss-graphs/graphs/RBML":
@@ -357,11 +370,13 @@ if __name__ == '__main__':
     mix_calvo_sub = ["diss-graphs/graphs/MIX/subset", mixing_calvo_subset, "Mixing Variant", True, "mlruns_csv/MIX"]
     sagas = ["diss-graphs/graphs/SAGA", saga, "Solution Composition", False, "mlruns_csv/SAGA"]
     sc_rd = ["diss-graphs/graphs/SC", sc_mix_rd, "Solution Composition", False, "mlruns_csv/SC"]
+    ga_base = ["diss-graphs/graphs/GA_BASELINE", ga_baseline, "Solution Composition", False, "mlruns_csv/GA_BASELINE"]
     moo_algos = ["diss-graphs/graphs/MOO", moo_baseline, "Solution Composition", False, "mlruns_csv/MOO"]
     moo_sampler = ["diss-graphs/graphs/SAMPLER", moo_sampler, "Solution Composition", False, "mlruns_csv/SAMPLER"]
-    moo_early = ["diss-graphs/graphs/EARLY", moo_early, "Solution Composition ", False, "mlruns_csv/EARLY"]
+    moo_early = ["diss-graphs/graphs/EARLY", moo_early, "Solution Composition", False, "mlruns_csv/EARLY"]
+    moo_ts = ["diss-graphs/graphs/TS", moo_ts, "Solution Composition", False, "mlruns_csv/TS"]
 
-    mlruns_to_csv(datasets, "EARLY", True)
+    mlruns_to_csv(datasets, "TS", True)
 
     # setting = rd
     # settinBaseline"    # setting = sagas
@@ -369,8 +384,9 @@ if __name__ == '__main__':
     # setting = mix_calvo_sub
     # setting = xcsf
     # setting = sc_rd
+    # setting = ga_base
     # setting = moo_algos
     # setting = moo_sampler
-    setting = moo_early
+    # setting = moo_early
+    setting = moo_ts
     run_main()
-
