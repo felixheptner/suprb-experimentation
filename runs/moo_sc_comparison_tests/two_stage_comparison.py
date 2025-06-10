@@ -56,7 +56,7 @@ def run(problem: str, job_id: str, optimizer: str, config: str, early_stopping: 
 
     sc_iter = 1000 if early_stopping else 32
     early_stopping_delta = 0
-    early_stopping_patience = 20 if early_stopping else -1
+    early_stopping_patience = 10 if early_stopping else -1
 
     config_dict = {
         "ga-moo": ts.TwoStageSolutionComposition(
