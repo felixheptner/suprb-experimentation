@@ -55,27 +55,29 @@ def run(problem: str, job_id: str, optimizer: str, config: str, early_stopping: 
     X, y = shuffle(X, y, random_state=random_state)
 
     sc_iter = 1000 if early_stopping else 32
+    early_stopping_delta = 0
+    early_stopping_patience = 20 if early_stopping else -1
 
     config_dict = {
         "ga-moo": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=0, early_stopping_patience=20),
+            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=early_stopping_delta, early_stopping_patience=early_stopping_patience),
             switch_iteration=32,
         ),
         "ga-moo_cold_staging": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=0, early_stopping_patience=20),
+            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=early_stopping_delta, early_stopping_patience=early_stopping_patience),
             switch_iteration=32,
             warm_start=False,
         ),
         "ga_without_tuning-moo": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=0, early_stopping_patience=20),
+            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=early_stopping_delta, early_stopping_patience=early_stopping_patience),
             switch_iteration=32,
         ),
         "ga_without_tuning-moo_cold_staging": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=0, early_stopping_patience=20),
+            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=early_stopping_delta, early_stopping_patience=early_stopping_patience),
             switch_iteration=32,
             warm_start=False,
         )
