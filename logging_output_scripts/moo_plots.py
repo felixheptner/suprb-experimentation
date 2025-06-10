@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import json
+import re
 import os
 from utils import datasets_map
 from sklearn.preprocessing import MinMaxScaler
@@ -66,6 +67,11 @@ def create_plots():
                     with open(os.path.join(path, "pareto_fronts.json")) as f:
                         pf = json.load(f)
                         pf = pf[str(max(int(key) for key in pf.keys()))]
+                        # The following is necessary as im a bit stupid and accidentally let the logger log ndarrays
+                        # Into the dictionary which are not serializable by default and thus got turned into strings -.-
+                        if isinstance(pf, str):
+                            pf = re.sub(r"\s+", ",", pf)
+                            pf = eval(pf)
                         pareto_fronts[renamed_heuristic].append(pf)
                         pareto_solutions[renamed_heuristic].extend(pf)
 
