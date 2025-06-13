@@ -71,6 +71,7 @@ def run(problem: str, job_id: str, optimizer: str):
         verbose=10,
         logger=CombinedLogger(
             [('stdout', StdoutLogger()), ('default', MOLogger())]),
+        random_state=random_state
     )
 
     tuning_params = dict(
