@@ -250,10 +250,16 @@ moo_early = {
     "Early Stopping spea2": "SPEA2 ES",
 }
 
-moo_ts = {
+moo_ts_noes = {
     "nsga3 Baseline": "NSGA-III",
-    "TSComp nsga3 c:ga-moo": "GA - NSGA-III",
-    "TSComp nsga3 c:ga_without_tuning-moo": "GA Untuned - NSGA-III",
+    "TSComp nsga3 c:ga-moo j": "GA - NSGA-III",
+    "TSComp nsga3 c:ga_without_tuning-moo ": "GA Untuned - NSGA-III",
+}
+
+moo_ts_es = {
+    "nsga3 Baseline": "NSGA-III",
+    "TSComp nsga3 c:ga-moo e:True": "GA - NSGA-III",
+    "TSComp nsga3 c:ga_without_tuning-moo e:True": "GA Untuned - NSGA-III",
 }
 
 adel = {"SupRB": "SupRB",
@@ -374,8 +380,8 @@ if __name__ == '__main__':
     moo_algos = ["diss-graphs/graphs/MOO", moo_baseline, "Solution Composition", False, "mlruns_csv/MOO"]
     moo_sampler = ["diss-graphs/graphs/SAMPLER", moo_sampler, "Solution Composition", False, "mlruns_csv/SAMPLER"]
     moo_early = ["diss-graphs/graphs/EARLY", moo_early, "Solution Composition", False, "mlruns_csv/EARLY"]
-    moo_ts = ["diss-graphs/graphs/TS", moo_ts, "Solution Composition", False, "mlruns_csv/TS"]
-
+    moo_ts_noes = ["diss-graphs/graphs/TS", moo_ts_noes, "Solution Composition", False, "mlruns_csv/TS"]
+    moo_ts_es = ["diss-graphs/graphs/TS", moo_ts_es, "Solution Composition", False, "mlruns_csv/TS"]
     mlruns_to_csv(datasets, "TS", True)
 
     # setting = rd
@@ -388,5 +394,6 @@ if __name__ == '__main__':
     # setting = moo_algos
     # setting = moo_sampler
     # setting = moo_early
-    setting = moo_ts
+    setting = moo_ts_noes
+    # setting = moo_ts_es
     run_main()
