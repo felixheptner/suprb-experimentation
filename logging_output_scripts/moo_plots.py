@@ -44,6 +44,7 @@ def create_plots():
         first = True
         pareto_fronts = {}
         pareto_solutions = {}
+        res_var = None # Initialize res_var here to ensure it's always defined
 
         for heuristic, renamed_heuristic in config['heuristics'].items():
             pareto_fronts[renamed_heuristic] = []
@@ -78,19 +79,31 @@ def create_plots():
         for heuristic in pareto_fronts.keys():
             pareto_solutions[heuristic] = np.array(pareto_solutions[heuristic])
 
+        # ================== Determine which heuristics have valid data for Iterations to Hypervolume ==================
+        valid_ithv_heuristics = []
+        # Ensure res_var is not None before proceeding
+        if res_var is not None:
+            for algo in config["heuristics"].values():
+                algo_df = res_var.loc[res_var["Used_Representation"] == algo]
+                iters = algo_df["metrics.sc_iterations"]
+                # Condition for "ugly and redundant": all iteration values are the same
+                if not iters.empty and iters.nunique() > 1: # Check if not empty and has more than 1 unique value
+                    valid_ithv_heuristics.append(algo)
+                else:
+                    print(f"Skipping Iterations to Hypervolume plot for {algo} due to constant/empty iteration count.")
+
+        # ================== Plotting Setup ==================
+        # Always create these figures as they don't have conditional removal
         fig_hex, axes_hex = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
                                          sharey=True, constrained_layout=True)
         fig_kde, axes_kde = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
                                          sharey=True, constrained_layout=True)
         fig_hist, axes_hist = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
                                          sharey=True, constrained_layout=True)
-        fig_ithv, axes_ithv = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
-                                       sharey=True, constrained_layout=True)
 
         fig_kde.suptitle(config['datasets'][problem])
         fig_hex.suptitle(config['datasets'][problem])
         fig_hist.suptitle(config['datasets'][problem])
-        fig_ithv.suptitle(config['datasets'][problem])
 
         # ================== HEXBIN Plots ==================
 
@@ -110,7 +123,6 @@ def create_plots():
             fig_hex.colorbar(hb, ax=axes_hex[i], label='Density')
 
         fig_hex.supylabel("Pseudo Accuracy")
-        # plt.tight_layout()
         fig_hex.savefig(f"{final_output_dir}/{datasets_map[problem]}_hex.png")
         plt.close(fig_hex)
 
@@ -131,7 +143,6 @@ def create_plots():
             axes_kde[i].set_xlim(0, 1)
             axes_kde[i].set_ylim(0, 1)
 
-        # plt.tight_layout()
         fig_kde.savefig(f"{final_output_dir}/{datasets_map[problem]}_kde.png")
         plt.close(fig_kde)
 
@@ -142,33 +153,48 @@ def create_plots():
             axes_hist[i].hist(pf_lengths, bins=np.arange(1, 33), align='left', rwidth=0.9)
             axes_hist[i].set_title(f"{algo}")
             axes_hist[i].set_xlabel(f"Pareto Front Length")
-            
-        fig_hex.supylabel("Cardinalities")
-        # plt.tight_layout()
+
+        fig_hist.supylabel("Cardinalities") # This was `fig_hex.supylabel` before, changed to `fig_hist`
         fig_hist.savefig((f"{final_output_dir}/{datasets_map[problem]}_hist.png"))
         plt.close(fig_hist)
 
-        # ================== Iterations to Hypervolume ==================
-        for i, algo in enumerate(config["heuristics"].values()):
-            algo_df = res_var.loc[res_var["Used_Representation"] == algo]
-            iters = algo_df["metrics.sc_iterations"]
-            hv = algo_df["metrics.hypervolume"]
-            algo_df = pd.DataFrame({
-                "Iterations": iters,
-                "Hypervolume": hv
-            })
-            sns.scatterplot(data=algo_df, x="Iterations", y="Hypervolume", ax=axes_ithv[i])
+        # ================== Iterations to Hypervolume (Conditional Plotting) ==================
+        if valid_ithv_heuristics: # Only create the figure if there are valid heuristics to plot
+            fig_ithv, axes_ithv = plt.subplots(1, len(valid_ithv_heuristics), figsize=(6 * len(valid_ithv_heuristics), 5), # Adjust figsize dynamically
+                                               sharex=True, sharey=True, constrained_layout=True)
+            # Ensure axes_ithv is always an array, even if there's only one subplot
+            if len(valid_ithv_heuristics) == 1:
+                axes_ithv = [axes_ithv]
 
-            # Fit regression line
-            X = algo_df["Iterations"].values.reshape(-1, 1)
-            y = algo_df["Hypervolume"].values
-            if not np.isnan(np.sum(X)):
-                reg = LinearRegression().fit(X, y)
-                axes_ithv[i].plot(X, reg.predict(X), color='red', linewidth=2)
+            fig_ithv.suptitle(config['datasets'][problem])
 
-            axes_ithv[i].set_title(f"{algo}")
-        fig_ithv.savefig(f"{final_output_dir}/{datasets_map[problem]}_ithv.png")
-        plt.close(fig_kde)
+            for i, algo in enumerate(valid_ithv_heuristics):
+                algo_df = res_var.loc[res_var["Used_Representation"] == algo]
+                iters = algo_df["metrics.sc_iterations"]
+                hv = algo_df["metrics.hypervolume"]
+                algo_df = pd.DataFrame({
+                    "Iterations": iters,
+                    "Hypervolume": hv
+                })
+                sns.scatterplot(data=algo_df, x="Iterations", y="Hypervolume", ax=axes_ithv[i])
+
+                # Fit regression line
+                X = algo_df["Iterations"].values.reshape(-1, 1)
+                y = algo_df["Hypervolume"].values
+                # Check for NaNs and infs before fitting, and ensure X has enough unique points
+                if not np.isnan(np.sum(X)) and not np.isinf(np.sum(X)) and len(np.unique(X)) > 1:
+                    reg = LinearRegression().fit(X, y)
+                    axes_ithv[i].plot(X, reg.predict(X), color='red', linewidth=2)
+                else:
+                    print(f"Skipping regression line for {algo} due to insufficient data or constant X.")
+
+
+                axes_ithv[i].set_title(f"{algo}")
+            fig_ithv.savefig(f"{final_output_dir}/{datasets_map[problem]}_ithv.png")
+            plt.close(fig_ithv) # Close fig_ithv, not fig_kde
+
+        else:
+            print(f"No valid data to plot Iterations to Hypervolume for problem: {problem}. Skipping this plot.")
 
 
 if __name__ == '__main__':

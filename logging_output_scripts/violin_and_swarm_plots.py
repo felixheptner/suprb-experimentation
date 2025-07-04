@@ -32,8 +32,6 @@ def create_plots():
     plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
     plt.rcParams['figure.dpi'] = 200
 
-    plt.tight_layout()
-
     with open('logging_output_scripts/config.json') as f:
         config = json.load(f)
 
@@ -75,7 +73,7 @@ def create_plots():
             ax.set_title(config['datasets'][problem], style="italic", fontsize=14)
             ax.set_xlabel(x_lab, weight="bold", labelpad=10)
 
-            plt.xticks(rotation=45, ha='right', fontsize=12)
+            plt.xticks(rotation=15, ha='right', fontsize=12)
 
             # Change this to adjust y_axis ticks
             y_min = max(0, min(ax.get_yticks()))
@@ -107,7 +105,7 @@ def create_plots():
                 plt.subplots_adjust(left=0.2, right=0.95, top=0.92, bottom=0.22)
                 ax = function(x='Used_Representation', y=y_axis, data=res_var, size=3)
                 ax_config(ax, y_label)
-
+                plt.tight_layout()
                 fig.savefig(f"{final_output_dir}/{datasets_map[problem]}_{name}_{y_label}.png")
                 plt.close(fig)
 
