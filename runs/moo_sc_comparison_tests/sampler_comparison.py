@@ -26,7 +26,7 @@ from suprb.optimizer.solution.sampler import BetaSolutionSampler, DiversitySolut
 
 random_state = 42
 
-opt_dict = {"nsag2": nsga2.NonDominatedSortingGeneticAlgorithm2,
+opt_dict = {"nsga2": nsga2.NonDominatedSortingGeneticAlgorithm2,
             "nsga3": nsga3.NonDominatedSortingGeneticAlgorithm3,
             "spea2": spea2.StrengthParetoEvolutionaryAlgorithm2}
 
