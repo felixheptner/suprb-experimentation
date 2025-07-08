@@ -382,7 +382,7 @@ if __name__ == '__main__':
     moo_early = ["diss-graphs/graphs/EARLY", moo_early, "Solution Composition", False, "mlruns_csv/EARLY"]
     moo_ts_noes = ["diss-graphs/graphs/TS", moo_ts_noes, "Solution Composition", False, "mlruns_csv/TS"]
     moo_ts_es = ["diss-graphs/graphs/TSES", moo_ts_es, "Solution Composition", False, "mlruns_csv/TSES"]
-    mlruns_to_csv(datasets, "TSES", True)
+    mlruns_to_csv(datasets, "EARLY", True)
 
     # setting = rd
     # settinBaseline"    # setting = sagas
@@ -394,6 +394,6 @@ if __name__ == '__main__':
     # setting = moo_algos
     # setting = moo_sampler
     # setting = moo_early
-    # setting = moo_ts_noes
-    setting = moo_ts_es
+    setting = moo_ts_noes
+    # setting = moo_ts_es
     run_main()
