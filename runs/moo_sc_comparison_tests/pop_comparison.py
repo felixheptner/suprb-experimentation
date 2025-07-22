@@ -97,7 +97,7 @@ def run(problem: str, job_id: str, optimizer: str, config: int):
             'solution_composition__mutation_rate', 0, 0.1)
 
 
-    experiment_name = (f'ProjComp {optimizer} ps:{config} j:{job_id} p:{problem}')
+    experiment_name = (f'PopComp {optimizer} ps:{config} j:{job_id} p:{problem}')
     print(experiment_name)
     experiment = Experiment(name=experiment_name,  verbose=10)
 

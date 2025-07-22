@@ -11,7 +11,7 @@
 #SBATCH --error=output/%A_%a.err       # stderr file
 #SBATCH --array=0-4                    # ----  five array tasks  ----
 #
-# Submit: sbatch nsgaii_array.sh
+# Submit: sbatch moo_experiment.sbatch
 # Check : squeue -j <array‑id>      or  sacct -j <array‑id>
 ###############################################################################
 

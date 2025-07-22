@@ -9,6 +9,7 @@ import os
 from utils import datasets_map
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression
+from suprb.logging.metrics import spread as metric_spread
 
 mse = "metrics.test_neg_mean_squared_error"
 complexity = "metrics.elitist_complexity"
@@ -150,7 +151,8 @@ def create_plots():
 
         for i, algo in enumerate(config["heuristics"].values()):
             pf_lengths = [len(pf) for pf in pareto_fronts[algo]]
-            axes_hist[i].hist(pf_lengths, bins=np.arange(1, 33), align='left', rwidth=0.9)
+            max_length = max(pf_lengths)
+            axes_hist[i].hist(pf_lengths, bins=np.arange(1, max(33, max_length + 1)), align='left', rwidth=0.9)
             axes_hist[i].set_title(f"{algo}")
             axes_hist[i].set_xlabel(f"Pareto Front Length")
 
@@ -196,6 +198,41 @@ def create_plots():
         else:
             print(f"No valid data to plot Iterations to Hypervolume for problem: {problem}. Skipping this plot.")
 
+        # ================== Spread Swarm & Violin Plots ==================
+        fig_spread, axes_spread = plt.subplots(1, 1, figsize=(14, 6), constrained_layout=True)
+
+        spread_df = []
+
+        for algo in pareto_fronts.keys():
+            for front in pareto_fronts[algo]:
+                front_np = np.array(front)
+                sp = metric_spread(front_np)
+                spread_df.append({
+                    "Used_Representation": algo,
+                    "Spread": sp
+                })
+
+        spread_df = pd.DataFrame(spread_df)
+
+        # Plot swarm
+        sns.swarmplot(data=spread_df, x="Used_Representation", y="Spread", ax=axes_spread, size=4)
+        axes_spread.set_title(f"{config['datasets'][problem]}", fontsize=18)
+        axes_spread.set_ylabel("Spread", fontsize=14)
+        axes_spread.set_xlabel("")
+        axes_spread.tick_params(axis='x', rotation=20)
+
+        fig_spread.savefig(f"{final_output_dir}/{datasets_map[problem]}_swarm_spread.png")
+        plt.close(fig_spread)
+
+        # Plot violin
+        sns.violinplot(data=spread_df, x="Used_Representation", y="Spread", ax=axes_spread, inner="box")
+        axes_spread.set_title(f"{config['datasets'][problem]}", fontsize=18)
+        axes_spread.set_ylabel("Spread", fontsize=14)
+        axes_spread.set_xlabel("")
+        axes_spread.tick_params(axis='x', rotation=20)
+
+        fig_spread.savefig(f"{final_output_dir}/{datasets_map[problem]}_violin_spread.png")
+        plt.close(fig_spread)
 
 if __name__ == '__main__':
     create_plots()

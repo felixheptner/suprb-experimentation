@@ -257,9 +257,15 @@ moo_ts_noes = {
 }
 
 moo_ts_es = {
-    "nsga3 Baseline": "NSGA-III",
-    "TSComp nsga3 c:ga-moo e:True": "GA - NSGA-III",
-    "TSComp nsga3 c:ga_without_tuning-moo e:True": "GA Untuned - NSGA-III",
+    "nsga2 Baseline": "NSGA-II",
+    "TSComp nsga3 c:ga-moo e:True": "GA - NSGA-II",
+    "TSComp nsga3 c:ga_without_tuning-moo e:True": "GA Untuned - NSGA-II",
+}
+
+pop_size = {
+    "nsga2 Baseline": "N = 32",
+    "ProjComp nsga2 ps:64": "N = 64",
+    "ProjComp nsga2 ps:128": "N = 128"
 }
 
 adel = {"SupRB": "SupRB",
@@ -382,7 +388,7 @@ if __name__ == '__main__':
     moo_early = ["diss-graphs/graphs/EARLY", moo_early, "Solution Composition", False, "mlruns_csv/EARLY"]
     moo_ts_noes = ["diss-graphs/graphs/TS", moo_ts_noes, "Solution Composition", False, "mlruns_csv/TS"]
     moo_ts_es = ["diss-graphs/graphs/TSES", moo_ts_es, "Solution Composition", False, "mlruns_csv/TSES"]
-    mlruns_to_csv(datasets, "EARLY", True)
+    pop_size = ["diss-graphs/graphs/POP", pop_size, "Solution Composition", False, "mlruns_csv/POP"]
 
     # setting = rd
     # settinBaseline"    # setting = sagas
@@ -392,8 +398,11 @@ if __name__ == '__main__':
     # setting = sc_rd
     # setting = ga_base
     # setting = moo_algos
-    # setting = moo_sampler
+    setting = moo_sampler
     # setting = moo_early
-    setting = moo_ts_noes
+    # setting = moo_ts_noes
     # setting = moo_ts_es
+    # setting = pop_size
+
+    mlruns_to_csv(datasets, subdir=setting[-1].split("/")[-1], normalize=True)
     run_main()
