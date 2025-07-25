@@ -58,7 +58,7 @@ ga_baseline = {
 }
 
 moo_baseline = {
-    #"Baseline c:ga_32": "GA",
+    "Baseline c:ga32": "GA",
     "nsga2 Baseline": "NSGA-II",
     "nsga3 Baseline": "NSGA-III",
     "spea2 Baseline": "SPEA2",
@@ -159,9 +159,9 @@ if __name__ == '__main__':
     pop_size = ["diss-graphs/graphs/POP", pop_size, "Solution Composition", False, "mlruns_csv/POP"]
 
     # setting = ga_base
-    # setting = moo_algos
+    setting = moo_algos
     # setting = moo_sampler
-    setting = moo_early
+    # setting = moo_early
     # setting = moo_ts_noes
     # setting = moo_ts_es
     # setting = pop_size

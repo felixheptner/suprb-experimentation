@@ -1,4 +1,4 @@
-from logging_output_scripts.utils import get_csv_df, get_normalized_df, check_and_create_dir, get_dataframe, get_all_runs, get_df
+from logging_output_scripts.utils import get_csv_df, get_df
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -16,6 +16,7 @@ complexity = "metrics.elitist_complexity"
 hypervolume = "metrics.hypervolume"
 spread = "metrics.spread"
 
+ga_baselines = ["Baseline c:ga32", "Baseline c:ga64", "Baseline c:ga_no_tuning"]
 
 def create_plots():
     """
@@ -80,11 +81,19 @@ def create_plots():
         for heuristic in pareto_fronts.keys():
             pareto_solutions[heuristic] = np.array(pareto_solutions[heuristic])
 
-        # ================== Determine which heuristics have valid data for Iterations to Hypervolume ==================
+        # Filter out soo comparison and compute data for soo overlays
+        moo_heuristics = [config["heuristics"][algo] for algo in config["heuristics"].keys() if not algo in ga_baselines]
+        soo_heuristics = [config["heuristics"][algo] for algo in config["heuristics"].keys() if algo in ga_baselines]
+        soo_averages = {}
+        for algo in soo_heuristics:
+            if len(pareto_solutions[algo]) > 0:
+                soo_averages[algo] = np.mean(pareto_solutions[algo], axis=0)
+
+        # Determine which heuristics have valid data for Iterations to Hypervolume
         valid_ithv_heuristics = []
         # Ensure res_var is not None before proceeding
         if res_var is not None:
-            for algo in config["heuristics"].values():
+            for algo in moo_heuristics:
                 algo_df = res_var.loc[res_var["Used_Representation"] == algo]
                 iters = algo_df["metrics.sc_iterations"]
                 # Condition for "ugly and redundant": all iteration values are the same
@@ -93,35 +102,60 @@ def create_plots():
                 else:
                     print(f"Skipping Iterations to Hypervolume plot for {algo} due to constant/empty iteration count.")
 
-        # ================== Plotting Setup ==================
+        # Plotting Setup
+        n_algs = len(moo_heuristics)
+        if n_algs <= 3:
+            n_cols = n_algs
+            n_rows = 1
+        elif n_algs == 4:
+            n_cols = n_rows = 2
+        else:
+            n_cols = 3
+            n_rows = (n_algs - 1) // 3 + 1
+
         # Always create these figures as they don't have conditional removal
-        fig_hex, axes_hex = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
+        fig_hex, axes_hex = plt.subplots(n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True,
                                          sharey=True, constrained_layout=True)
-        fig_kde, axes_kde = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
+        fig_kde, axes_kde = plt.subplots(n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True,
                                          sharey=True, constrained_layout=True)
-        fig_hist, axes_hist = plt.subplots(1, len(config["heuristics"].values()), figsize=(18, 5), sharex=True,
+        fig_hist, axes_hist = plt.subplots(n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True,
                                          sharey=True, constrained_layout=True)
+
+        # Always make axes a two dimensional ndarray
+        if n_rows == 1:
+            axes_hex = axes_hex[None, :]
+            axes_kde = axes_kde[None, :]
+            axes_hist = axes_hist[None, :]
 
         fig_kde.suptitle(config['datasets'][problem])
         fig_hex.suptitle(config['datasets'][problem])
         fig_hist.suptitle(config['datasets'][problem])
 
         # ================== HEXBIN Plots ==================
-
-        for i, algo in enumerate(config["heuristics"].values()):
+        soo_handles = []
+        for i, algo in enumerate(moo_heuristics):
             algo_df = pd.DataFrame({
                 "Normed Complexity": pareto_solutions[algo][:, 0],
                 "Pseudo Accuracy": pareto_solutions[algo][:, 1]
             })
 
-            hb = axes_hex[i].hexbin(
+            hb = axes_hex[i // n_cols, i % n_cols].hexbin(
                 algo_df['Normed Complexity'], algo_df['Pseudo Accuracy'],
                 gridsize=30, cmap='viridis', extent=(0, 1, 0, 1)
             )
-            axes_hex[i].set_title(f"{algo}")
-            axes_hex[i].set_xlabel("Normed Complexity")
 
-            fig_hex.colorbar(hb, ax=axes_hex[i], label='Density')
+            axes_hex[i // n_cols, i % n_cols].set_title(f"{algo}")
+
+            # Plot SOO comparison points
+            for soo_algo, avg in soo_averages.items():
+                axes_hex[i // n_cols, i % n_cols].plot(
+                    avg[0], avg[1], marker='x', markersize=6,
+                    markeredgewidth=1.2, color='red',
+                    linestyle='None', label=f"{soo_algo}"
+                )
+
+            axes_hex[i // n_cols, i % n_cols].set_xlabel("Normed Complexity")
+            fig_hex.colorbar(hb, ax=axes_hex[i // n_cols, i % n_cols], label='Density')
 
         fig_hex.supylabel("Pseudo Accuracy")
         fig_hex.savefig(f"{final_output_dir}/{datasets_map[problem]}_hex.png")
@@ -129,7 +163,8 @@ def create_plots():
 
         # ================== KDE Plots ==================
 
-        for i, algo in enumerate(config["heuristics"].values()):
+        soo_handles
+        for i, algo in enumerate(moo_heuristics):
             algo_df = pd.DataFrame({
                 "Normed Complexity": pareto_solutions[algo][:, 0],
                 "Pseudo Accuracy": pareto_solutions[algo][:, 1]
@@ -137,24 +172,24 @@ def create_plots():
 
             sns.kdeplot(
                 data=algo_df, x='Normed Complexity', y='Pseudo Accuracy',
-                fill=True, cmap='Blues', ax=axes_kde[i],
+                fill=True, cmap='Blues', ax=axes_kde[i // n_cols, i % n_cols],
                 thresh=0.05, levels=100, clip=((0, 1), (0, 1))
             )
-            axes_kde[i].set_title(f"{algo}")
-            axes_kde[i].set_xlim(0, 1)
-            axes_kde[i].set_ylim(0, 1)
+            axes_kde[i // n_cols, i % n_cols].set_title(f"{algo}")
+            axes_kde[i // n_cols, i % n_cols].set_xlim(0, 1)
+            axes_kde[i // n_cols, i % n_cols].set_ylim(0, 1)
 
         fig_kde.savefig(f"{final_output_dir}/{datasets_map[problem]}_kde.png")
         plt.close(fig_kde)
 
         # ================== |Pareto Front| Histograms ==================
 
-        for i, algo in enumerate(config["heuristics"].values()):
+        for i, algo in enumerate(moo_heuristics):
             pf_lengths = [len(pf) for pf in pareto_fronts[algo]]
             max_length = max(pf_lengths)
-            axes_hist[i].hist(pf_lengths, bins=np.arange(1, max(33, max_length + 1)), align='left', rwidth=0.9)
-            axes_hist[i].set_title(f"{algo}")
-            axes_hist[i].set_xlabel(f"Pareto Front Length")
+            axes_hist[i // n_cols, i % n_cols].hist(pf_lengths, bins=np.arange(1, max(33, max_length + 1)), align='left', rwidth=0.9)
+            axes_hist[i // n_cols, i % n_cols].set_title(f"{algo}")
+            axes_hist[i // n_cols, i % n_cols].set_xlabel(f"Pareto Front Length")
 
         fig_hist.supylabel("Cardinalities") # This was `fig_hex.supylabel` before, changed to `fig_hist`
         fig_hist.savefig((f"{final_output_dir}/{datasets_map[problem]}_hist.png"))
@@ -198,8 +233,7 @@ def create_plots():
         else:
             print(f"No valid data to plot Iterations to Hypervolume for problem: {problem}. Skipping this plot.")
 
-        # ================== Spread Swarm & Violin Plots ==================
-        fig_spread, axes_spread = plt.subplots(1, 1, figsize=(14, 6), constrained_layout=True)
+        # ================== Spread Swarm Plot ==================
 
         spread_df = []
 
@@ -214,25 +248,43 @@ def create_plots():
 
         spread_df = pd.DataFrame(spread_df)
 
-        # Plot swarm
-        sns.swarmplot(data=spread_df, x="Used_Representation", y="Spread", ax=axes_spread, size=4)
-        axes_spread.set_title(f"{config['datasets'][problem]}", fontsize=18)
-        axes_spread.set_ylabel("Spread", fontsize=14)
-        axes_spread.set_xlabel("")
-        axes_spread.tick_params(axis='x', rotation=20)
+        # Swarm plot
+        fig_swarm, ax_swarm = plt.subplots(dpi=400)
+        plt.subplots_adjust(left=0.2, right=0.95, top=0.92, bottom=0.22)
 
-        fig_spread.savefig(f"{final_output_dir}/{datasets_map[problem]}_swarm_spread.png")
-        plt.close(fig_spread)
+        sns.swarmplot(data=spread_df, x="Used_Representation", y="Spread", ax=ax_swarm, size=3)
+        ax_swarm.set_title(f"{config['datasets'][problem]}", style="italic", fontsize=14)
+        ax_swarm.set_ylabel("Spread", fontsize=18, weight="bold")
+        ax_swarm.set_xlabel("")
+        ax_swarm.tick_params(axis='x', rotation=15)
+        y_min = max(0, min(ax_swarm.get_yticks()))
+        y_max = max(ax_swarm.get_yticks())
+        num_ticks = 7
+        y_tick_positions = np.linspace(y_min, y_max, num_ticks)
+        y_tick_positions = np.round(y_tick_positions, 3)
 
-        # Plot violin
-        sns.violinplot(data=spread_df, x="Used_Representation", y="Spread", ax=axes_spread, inner="box")
-        axes_spread.set_title(f"{config['datasets'][problem]}", fontsize=18)
-        axes_spread.set_ylabel("Spread", fontsize=14)
-        axes_spread.set_xlabel("")
-        axes_spread.tick_params(axis='x', rotation=20)
+        ax_swarm.set_ylim(y_min, y_max)
+        ax_swarm.set_yticks(y_tick_positions)
+        ax_swarm.set_yticklabels([f'{x:.3g}' for x in y_tick_positions])
+        plt.tight_layout()
+        fig_swarm.savefig(f"{final_output_dir}/{datasets_map[problem]}_swarm_spread.png")
+        plt.close(fig_swarm)
 
-        fig_spread.savefig(f"{final_output_dir}/{datasets_map[problem]}_violin_spread.png")
-        plt.close(fig_spread)
+        # ================== Spread Violin Plot ==================
+        fig_violin, ax_violin = plt.subplots(dpi=400)
+        plt.subplots_adjust(left=0.2, right=0.95, top=0.92, bottom=0.22)
+
+        sns.violinplot(data=spread_df, x="Used_Representation", y="Spread", ax=ax_violin, inner="box", size=3)
+        ax_violin.set_title(f"{config['datasets'][problem]}", style="italic", fontsize=14)
+        ax_violin.set_ylabel("Spread", fontsize=18, weight="bold")
+        ax_violin.set_xlabel("")
+        ax_violin.tick_params(axis='x', rotation=15)
+        ax_swarm.set_ylim(y_min, y_max)
+        ax_swarm.set_yticks(y_tick_positions)
+        ax_swarm.set_yticklabels([f'{x:.3g}' for x in y_tick_positions])
+        plt.tight_layout()
+        fig_violin.savefig(f"{final_output_dir}/{datasets_map[problem]}_violin_spread.png")
+        plt.close(fig_violin)
 
 if __name__ == '__main__':
     create_plots()
