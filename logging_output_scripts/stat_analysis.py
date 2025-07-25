@@ -60,15 +60,10 @@ textwidth /= 72.27
 elitist_complexity = "metrics.elitist_complexity"
 mse = "metrics.test_neg_mean_squared_error"
 
-metrics = {
-    mse: "MSE",
-    elitist_complexity: "Model Complexity"
-}
-
 
 def smart_print(df, latex):
     if latex:
-        print(df.to_latex())
+        print(df.to_latex(index=False))
     else:
         print(df.to_markdown())
 
@@ -98,7 +93,7 @@ def load_data(config):
         dfs = [df.reset_index() for df in dfs]
 
     df = pd.concat(dfs, keys=keys, names=["algorithm", "task"], verify_integrity=True)
-    df = df[metrics.keys()]
+    df = df[config["metrics"].values()]
 
     if config["data_directory"] == "mlruns_csv/RBML":
         df[elitist_complexity] = 0.3
@@ -130,6 +125,8 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
 
     with open('logging_output_scripts/config.json') as f:
         config = json.load(f)
+
+    metrics = {y: x for x, y in config['metrics'].items()}
 
     final_output_dir = f"{config['output_directory']}"
     # check_and_create_dir(final_output_dir, "calvo")
@@ -230,6 +227,8 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
 def ttest(latex, cand1, cand2, cand1_name, cand2_name):
     with open('logging_output_scripts/config.json') as f:
         config = json.load(f)
+
+    metrics = {y: x for x, y in config["metrics"].items()}
 
     final_output_dir = f"{config['output_directory']}"
 
@@ -349,16 +348,19 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
             ax_val.set_ylabel(ylabel, weight="bold")
             ax_val.set_xlabel(xlabel, weight="bold")
 
-            if metrics[metric] == "Model Complexity":
-                fig.tight_layout(pad=0.1)
-            else:
-                fig.tight_layout(pad=0.1)
+            fig.tight_layout()
 
             nname = "mse" if metric == "metrics.test_neg_mean_squared_error" else "complexity"
 
-            xlabel = (f"MSE({cand2_name}) - MSE({cand1_name})"
-                      if metrics[metric] == "MSE"
-                      else (f"COMP({cand2_name}) - COMP({cand1_name})"))
+            if metrics[metric] == "MSE":
+                xlabel = f"MSE({cand2_name}) - MSE({cand1_name})"
+            elif metrics[metric] == "COMP":
+                xlabel = f"COMP({cand2_name}) - COMP({cand1_name})"
+            elif metrics[metric] == "Hypervolume":
+                xlabel = f"HV({cand2_name}) - HV({cand1_name})"
+            else:
+                xlabel = f"{metrics[metric]}({cand2_name}) - {metrics[metric]}({cand1_name})"
+
             ylabel = "Density"
             fig.text(0.5, -0.01, xlabel, ha='center')
             fig.text(0.01, 0.5, ylabel, ha='center', rotation=90)
@@ -373,14 +375,30 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
     hdis_ = hdis
     hdis_melt = pd.json_normalize(hdis_, sep=">>").melt()
     hdis = hdis_melt["variable"].str.split(">>", expand=True)
-    hdis.columns = ["n", "metric", "task", "kind"]
+    hdis.columns = ["n", "Metric", "Dataset", "kind"]
     del hdis["n"]
     hdis["bound"] = hdis_melt["value"]
     hdis = hdis.set_index(list(hdis.columns[:-1]))
     hdis = hdis.unstack("kind")
-    hdis["bound", "lower"] = hdis["bound", "lower"].apply(lambda x: f"[{round_to_n_sig_figs(x, n=2)},")
-    hdis["bound", "upper"] = hdis["bound", "upper"].apply(lambda x: f"{round_to_n_sig_figs(x, n=2)}]")
-    hdis = hdis.rename(columns={"bound": "99\% HDI"})
+    # Format both ends first
+    # Format both ends first
+    lower = hdis["bound", "lower"].apply(lambda x: round_to_n_sig_figs(x, n=2))
+    upper = hdis["bound", "upper"].apply(lambda x: round_to_n_sig_figs(x, n=2))
+
+    # Merge into a single string column like "[x, y]"
+    hdis[("99% HDI", "")] = "[" + lower.astype(str) + ", " + upper.astype(str) + "]"
+
+    hdis = hdis.drop(columns=["bound"])
+
+    hdis.columns.names = [None, None]
+    hdis.columns = pd.MultiIndex.from_tuples([(col[0], '') for col in hdis.columns])
+    hdis = hdis.reset_index()
+
+    if isinstance(hdis.columns, pd.MultiIndex):
+        hdis.columns = [col[0] if col[1] == '' else f"{col[0]}_{col[1]}" for col in hdis.columns]
+
+    if hdis["Metric"].nunique(dropna=True) <= 1:
+        hdis = hdis.drop(columns="Metric")
 
     smart_print(hdis, latex=latex)
 
