@@ -10,13 +10,63 @@ from utils import datasets_map
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression
 from suprb.logging.metrics import spread as metric_spread
+from matplotlib.patches import Ellipse
+import matplotlib.transforms as transforms
 
 mse = "metrics.test_neg_mean_squared_error"
 complexity = "metrics.elitist_complexity"
 hypervolume = "metrics.hypervolume"
 spread = "metrics.spread"
 
-ga_baselines = ["Baseline c:ga32", "Baseline c:ga64", "Baseline c:ga_no_tuning"]
+ga_baselines = {"Baseline c:ga32": "x", "Baseline c:ga64": "+", "Baseline c:ga_no_tuning": "1"}
+
+def confidence_ellipse(mean, cov, ax, n_std=1.96, facecolor='red', **kwargs):
+    """
+    https://de.matplotlib.net/stable/gallery/statistics/confidence_ellipse.html#the-plotting-function-itself
+    http://www.econ.uiuc.edu/~roger/courses/471/lectures/L5.pdf
+
+    Create a plot of the covariance confidence ellipse with mean and cov*.
+
+    Parameters
+    ----------
+    mean: array-like, shape (2,)
+        mean of the data point
+    cov: array-like, shape (2,2)
+        covariance matrix
+    ax : matplotlib.axes.Axes
+        The axes object to draw the ellipse into.
+
+    n_std : float
+        The number of standard deviations to determine the ellipse's radiuses.
+
+    **kwargs
+        Forwarded to `~matplotlib.patches.Ellipse`
+
+    Returns
+    -------
+    matplotlib.patches.Ellipse
+    """
+    pearson = cov[0, 1] / np.sqrt(cov[0, 0] * cov[1, 1])
+    # Using a special case to obtain the eigenvalues of this
+    # two-dimensional dataset.
+    ell_radius_x = np.sqrt(1 + pearson)
+    ell_radius_y = np.sqrt(1 - pearson)
+    ellipse = Ellipse((0, 0), width=ell_radius_x * 2, height=ell_radius_y * 2,
+                      facecolor=facecolor, **kwargs)
+
+    # Calculating the standard deviation of x from
+    # the squareroot of the variance and multiplying
+    # with the given number of standard deviations.
+    scale_x = np.sqrt(cov[0, 0]) * n_std
+    # calculating the standard deviation of y ...
+    scale_y = np.sqrt(cov[1, 1]) * n_std
+    transf = transforms.Affine2D() \
+        .rotate_deg(45) \
+        .scale(scale_x, scale_y) \
+        .translate(mean[0], mean[1])
+
+    ellipse.set_transform(transf + ax.transData)
+    return ax.add_patch(ellipse)
 
 def create_plots():
     """
@@ -82,12 +132,14 @@ def create_plots():
             pareto_solutions[heuristic] = np.array(pareto_solutions[heuristic])
 
         # Filter out soo comparison and compute data for soo overlays
-        moo_heuristics = [config["heuristics"][algo] for algo in config["heuristics"].keys() if not algo in ga_baselines]
-        soo_heuristics = [config["heuristics"][algo] for algo in config["heuristics"].keys() if algo in ga_baselines]
+        moo_heuristics = [config["heuristics"][algo] for algo in config["heuristics"].keys() if not algo in ga_baselines.keys()]
+        soo_heuristics = [(config["heuristics"][algo], ga_baselines[algo]) for algo in config["heuristics"].keys() if algo in ga_baselines.keys()]
         soo_averages = {}
-        for algo in soo_heuristics:
+        soo_standard_devs = {}
+        for algo, marker in soo_heuristics:
             if len(pareto_solutions[algo]) > 0:
-                soo_averages[algo] = np.mean(pareto_solutions[algo], axis=0)
+                soo_averages[algo] = (np.mean(pareto_solutions[algo], axis=0), marker)
+                soo_standard_devs[algo] = (np.cov(pareto_solutions[algo].T), marker)
 
         # Determine which heuristics have valid data for Iterations to Hypervolume
         valid_ithv_heuristics = []
@@ -141,19 +193,24 @@ def create_plots():
 
             hb = axes_hex[i // n_cols, i % n_cols].hexbin(
                 algo_df['Normed Complexity'], algo_df['Pseudo Accuracy'],
-                gridsize=30, cmap='viridis', extent=(0, 1, 0, 1)
+                gridsize=30, cmap='Blues', extent=(0, 1, 0, 1), mincnt=1,
             )
 
             axes_hex[i // n_cols, i % n_cols].set_title(f"{algo}")
 
             # Plot SOO comparison points
-            for soo_algo, avg in soo_averages.items():
+            for (soo_algo, value) in soo_averages.items():
+                avg, marker = value
+                cov = soo_standard_devs[soo_algo][0]
                 axes_hex[i // n_cols, i % n_cols].plot(
-                    avg[0], avg[1], marker='x', markersize=6,
+                    avg[0], avg[1], marker=marker, markersize=6,
                     markeredgewidth=1.2, color='red',
-                    linestyle='None', label=f"{soo_algo}"
+                    linestyle='None', label=f"{soo_algo} Mean"
                 )
+                confidence_ellipse(avg, cov, axes_hex[i // n_cols, i % n_cols], n_std=1.96,
+                                   edgecolor='red', label=f"{soo_algo} 95% CI", alpha=0.5)
 
+            axes_hex[i // n_cols, i % n_cols].legend(fontsize=8, loc="lower right")
             axes_hex[i // n_cols, i % n_cols].set_xlabel("Normed Complexity")
             fig_hex.colorbar(hb, ax=axes_hex[i // n_cols, i % n_cols], label='Density')
 

@@ -58,7 +58,8 @@ ga_baseline = {
 }
 
 moo_baseline = {
-    "Baseline c:ga32": "GA",
+    "Baseline c:ga32": "GA 32",
+    "Baseline c:ga64": "GA 64",
     "nsga2 Baseline": "NSGA-II",
     "nsga3 Baseline": "NSGA-III",
     "spea2 Baseline": "SPEA2",
@@ -66,7 +67,7 @@ moo_baseline = {
 
 moo_sampler = {
     "uniform": "Uniform",
-    "nsga3 Baseline": r"Beta $\alpha = \beta = 1.5$",
+    "nsga2 Baseline": r"Beta $\alpha = \beta = 1.5$",
     "beta": "Beta Tuned",
     "beta_projection": "Beta Projection",
     "diversity": "Diversity",
@@ -89,8 +90,8 @@ moo_ts_noes = {
 
 moo_ts_es = {
     "nsga2 Baseline": "NSGA-II",
-    "TSComp nsga3 c:ga-moo e:True": "GA - NSGA-II",
-    "TSComp nsga3 c:ga_without_tuning-moo e:True": "GA Untuned - NSGA-II",
+    "TSComp nsga2 c:ga-moo e:True": "GA - NSGA-II",
+    "TSComp nsga2 c:ga_without_tuning-moo e:True": "GA Untuned - NSGA-II",
 }
 
 pop_size = {
@@ -126,10 +127,6 @@ def run_main():
         all_runs_df = mlflow.search_runs(search_all_experiments=True)
         filter_runs(all_runs_df)
 
-    moo_plots.create_plots()
-    violin_and_swarm_plots.create_plots()
-    # calvo(ylabel=setting[2])
-
     if setting[0] == "diss-graphs/graphs/SAGA":
         ttest(latex=False, cand1="s:saga1", cand2="s:ga", cand1_name="SAGA1", cand2_name="GA")
         ttest(latex=False, cand1="s:saga2", cand2="s:ga", cand1_name="SAGA2", cand2_name="GA")
@@ -147,6 +144,10 @@ def run_main():
         ttest(latex=True, cand1="nsga2 Baseline", cand2="spea2 Baseline", cand1_name="NSGA-II", cand2_name="SPEA2")
 
         ttest(latex=True, cand1="nsga3 Baseline", cand2="spea2 Baseline", cand1_name="NSGA-III", cand2_name="SPEA2")
+
+    # calvo(ylabel=setting[2])
+    moo_plots.create_plots()
+    violin_and_swarm_plots.create_plots()
 
 
 if __name__ == '__main__':

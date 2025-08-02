@@ -354,12 +354,16 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
 
             if metrics[metric] == "MSE":
                 xlabel = f"MSE({cand2_name}) - MSE({cand1_name})"
+                nname = "mse"
             elif metrics[metric] == "COMP":
                 xlabel = f"COMP({cand2_name}) - COMP({cand1_name})"
+                nname = "complexity"
             elif metrics[metric] == "Hypervolume":
                 xlabel = f"HV({cand2_name}) - HV({cand1_name})"
+                nname = "hypervolume"
             else:
                 xlabel = f"{metrics[metric]}({cand2_name}) - {metrics[metric]}({cand1_name})"
+                nname = metrics[metric]
 
             ylabel = "Density"
             fig.text(0.5, -0.01, xlabel, ha='center')
@@ -369,6 +373,7 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
                 ax[-1].set_visible(False)
 
             fig.align_ylabels()
+            fig.tight_layout()
             fig.savefig(f"{final_output_dir}/ttest_{cand1_name}_{cand2_name}_{nname}.pdf", dpi=fig.dpi, bbox_inches="tight")
 
     # https://stackoverflow.com/a/67575847/6936216
