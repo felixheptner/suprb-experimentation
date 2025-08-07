@@ -42,7 +42,7 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 @click.option('-p', '--problem', type=click.STRING, default='airfoil_self_noise')
 @click.option('-j', '--job_id', type=click.STRING, default='NA')
 @click.option('-o', '--optimizer', type=click.STRING, default='nsga3')
-@click.option('-pr', '--projection', type=click.BOOL, default=False)
+@click.option('-c', '--projection', type=click.BOOL, default=False)
 
 def run(problem: str, job_id: str, optimizer: str, projection: bool):
     print(f"Problem is {problem}, with job id {job_id} and optimizer {optimizer}")
