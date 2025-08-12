@@ -83,9 +83,9 @@ moo_early = {
 }
 
 moo_ts_noes = {
-    "nsga3 Baseline": "NSGA-III",
-    "TSComp nsga3 c:ga-moo j": "GA - NSGA-III",
-    "TSComp nsga3 c:ga_without_tuning-moo ": "GA Untuned - NSGA-III",
+    "nsga2 Baseline": "NSGA-II",
+    "TSComp nsga2 c:ga-moo j": "GA - NSGA-II",
+    "TSComp nsga2 c:ga_without_tuning-moo ": "GA Untuned - NSGA-II",
 }
 
 moo_ts_es = {
@@ -160,9 +160,9 @@ if __name__ == '__main__':
     pop_size = ["diss-graphs/graphs/POP", pop_size, "Solution Composition", False, "mlruns_csv/POP"]
 
     # setting = ga_base
-    setting = moo_algos
+    # setting = moo_algos
     # setting = moo_sampler
-    # setting = moo_early
+    setting = moo_early
     # setting = moo_ts_noes
     # setting = moo_ts_es
     # setting = pop_size

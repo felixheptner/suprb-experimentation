@@ -7,7 +7,6 @@ import json
 import re
 import os
 from utils import datasets_map
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression
 from suprb.logging.metrics import spread as metric_spread
 from matplotlib.patches import Ellipse
@@ -323,6 +322,7 @@ def create_plots():
         ax_swarm.set_ylim(y_min, y_max)
         ax_swarm.set_yticks(y_tick_positions)
         ax_swarm.set_yticklabels([f'{x:.3g}' for x in y_tick_positions])
+        plt.xticks(rotation=15, ha='right', fontsize=12)
         plt.tight_layout()
         fig_swarm.savefig(f"{final_output_dir}/{datasets_map[problem]}_swarm_spread.png")
         plt.close(fig_swarm)
@@ -339,6 +339,7 @@ def create_plots():
         ax_swarm.set_ylim(y_min, y_max)
         ax_swarm.set_yticks(y_tick_positions)
         ax_swarm.set_yticklabels([f'{x:.3g}' for x in y_tick_positions])
+        plt.xticks(rotation=15, ha='right', fontsize=12)
         plt.tight_layout()
         fig_violin.savefig(f"{final_output_dir}/{datasets_map[problem]}_violin_spread.png")
         plt.close(fig_violin)
