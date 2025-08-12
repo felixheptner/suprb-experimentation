@@ -54,7 +54,7 @@ def run(problem: str, job_id: str, optimizer: str, projection: bool):
         rule_discovery=es.ES1xLambda(),
         solution_composition=opt_dict[optimizer](n_iter=32,
                                                  population_size=32,
-                                                 sampler=BetaSolutionSampler(a=1.5, b=1.5, projected=false)),
+                                                 sampler=BetaSolutionSampler(a=1.5, b=1.5, projected=False)),
         n_iter=32,
         n_rules=4,
         verbose=10,
