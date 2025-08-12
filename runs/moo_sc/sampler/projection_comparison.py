@@ -42,7 +42,6 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 @click.option('-p', '--problem', type=click.STRING, default='airfoil_self_noise')
 @click.option('-j', '--job_id', type=click.STRING, default='NA')
 @click.option('-o', '--optimizer', type=click.STRING, default='nsga3')
-@click.option('-c', '--projection', type=click.BOOL, default=False)
 
 def run(problem: str, job_id: str, optimizer: str, projection: bool):
     print(f"Problem is {problem}, with job id {job_id} and optimizer {optimizer}")
@@ -55,7 +54,7 @@ def run(problem: str, job_id: str, optimizer: str, projection: bool):
         rule_discovery=es.ES1xLambda(),
         solution_composition=opt_dict[optimizer](n_iter=32,
                                                  population_size=32,
-                                                 sampler=BetaSolutionSampler(a=1.5, b=1.5, projected=projection)),
+                                                 sampler=BetaSolutionSampler(a=1.5, b=1.5, projected=false)),
         n_iter=32,
         n_rules=4,
         verbose=10,
