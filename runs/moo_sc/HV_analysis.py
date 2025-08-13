@@ -85,7 +85,7 @@ if __name__ == "__main__":
     sc_iter = 32
 
     cm = 1 / 2.54
-    plt.figure(figsize=(10 * cm, 10 * cm))
+    fig, ax = plt.subplots(figsize=(10 * cm, 10 * cm))
 
     for dataset_name, dataset_abbr in datasets.items():
         print(f"Running analysis for {dataset_abbr} ({dataset_name})")
@@ -147,11 +147,11 @@ if __name__ == "__main__":
         spreads = logger.metrics_["spread"]
         spread = spreads[suprb_iter - 1]
 
-        plt.plot(hvs, label=dataset_abbr)
-        # plt.title(dataset_abbr)
-    plt.ylabel("Hypervolume")
-    plt.xlabel("SupRB Iteration")
-    plt.grid(True)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig("./diss-graphs/graphs/misc/hv_it.pdf")
+        ax.plot(hvs, label=dataset_abbr)
+
+    ax.set_ylabel("Hypervolume")
+    ax.set_xlabel("SupRB Iteration")
+    ax.grid(True)
+    ax.legend()
+    fig.tight_layout()
+    fige.savefig("./diss-graphs/graphs/misc/hv_it.pdf")

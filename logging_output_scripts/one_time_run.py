@@ -66,15 +66,15 @@ moo_baseline = {
 }
 
 moo_sampler = {
-    "uniform": "Uniform",
-    "nsga2 Baseline": r"Beta $\alpha = \beta = 1.5$",
-    "beta": "Beta Tuned",
-    "beta_projection": "Beta Projection",
-    "diversity": "Diversity",
+    "SampComp nsga2 s:uniform j:733226": "Uniform",
+    "nsga2 Baseline j:730083": r"Beta $\alpha = \beta = 1.5$",
+    "SampComp nsga2 s:beta j:733231": "Beta Tuned",
+    "SampComp nsga2 s:beta_projection j:733236": "Beta Projection",
+    "SampComp nsga2 s:diversity j:733241": "Diversity",
 }
 
 moo_early = {
-    "nsga2 Baseline": "NSGA-II",
+    "nsga2 Baseline j:730083": "NSGA-II",
     "Early Stopping nsga2": "NSGA-II ES",
     "nsga3 Baseline": "NSGA-III",
     "Early Stopping nsga3": "NSGA-III ES",
@@ -83,19 +83,19 @@ moo_early = {
 }
 
 moo_ts_noes = {
-    "nsga2 Baseline": "NSGA-II",
+    "nsga2 Baseline j:730083": "NSGA-II",
     "TSComp nsga2 c:ga-moo j": "GA - NSGA-II",
     "TSComp nsga2 c:ga_without_tuning-moo ": "GA Untuned - NSGA-II",
 }
 
 moo_ts_es = {
-    "nsga2 Baseline": "NSGA-II",
+    "nsga2 Baseline j:730083": "NSGA-II",
     "TSComp nsga2 c:ga-moo e:True": "GA - NSGA-II",
     "TSComp nsga2 c:ga_without_tuning-moo e:True": "GA Untuned - NSGA-II",
 }
 
 pop_size = {
-    "nsga2 Baseline": "N = 32",
+    "nsga2 Baseline j:730083": "N = 32",
     "ProjComp nsga2 ps:64": "N = 64",
     "ProjComp nsga2 ps:128": "N = 128"
 }
@@ -160,9 +160,9 @@ if __name__ == '__main__':
     pop_size = ["diss-graphs/graphs/POP", pop_size, "Solution Composition", False, "mlruns_csv/POP"]
 
     # setting = ga_base
-    # setting = moo_algos
+    setting = moo_algos
     # setting = moo_sampler
-    setting = moo_early
+    # setting = moo_early
     # setting = moo_ts_noes
     # setting = moo_ts_es
     # setting = pop_size

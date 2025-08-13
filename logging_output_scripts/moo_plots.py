@@ -17,9 +17,9 @@ complexity = "metrics.elitist_complexity"
 hypervolume = "metrics.hypervolume"
 spread = "metrics.spread"
 
-ga_baselines = {"Baseline c:ga32": "x", "Baseline c:ga64": "+", "Baseline c:ga_no_tuning": "1"}
+ga_baselines = {"Baseline c:ga32": ("x", "red"), "Baseline c:ga64": ("+", "cyan"), "Baseline c:ga_no_tuning": ("1", "green")}
 
-def confidence_ellipse(mean, cov, ax, n_std=1.96, facecolor='red', **kwargs):
+def confidence_ellipse(mean, cov, ax, n_std=1.96, color='red', **kwargs):
     """
     https://de.matplotlib.net/stable/gallery/statistics/confidence_ellipse.html#the-plotting-function-itself
     http://www.econ.uiuc.edu/~roger/courses/471/lectures/L5.pdf
@@ -51,7 +51,7 @@ def confidence_ellipse(mean, cov, ax, n_std=1.96, facecolor='red', **kwargs):
     ell_radius_x = np.sqrt(1 + pearson)
     ell_radius_y = np.sqrt(1 - pearson)
     ellipse = Ellipse((0, 0), width=ell_radius_x * 2, height=ell_radius_y * 2,
-                      facecolor=facecolor, **kwargs)
+                      facecolor=color, edgecolor=color, **kwargs)
 
     # Calculating the standard deviation of x from
     # the squareroot of the variance and multiplying
@@ -65,7 +65,10 @@ def confidence_ellipse(mean, cov, ax, n_std=1.96, facecolor='red', **kwargs):
         .translate(mean[0], mean[1])
 
     ellipse.set_transform(transf + ax.transData)
-    return ax.add_patch(ellipse)
+    ellipse.set_edgecolor(color)
+    ellipse.set_facecolor((ellipse.get_facecolor()[0], ellipse.get_facecolor()[1], ellipse.get_facecolor()[2], 0.2)) # 20% alpha for fill
+    ax.add_patch(ellipse)
+    return ellipse
 
 def create_plots():
     """
@@ -135,10 +138,10 @@ def create_plots():
         soo_heuristics = [(config["heuristics"][algo], ga_baselines[algo]) for algo in config["heuristics"].keys() if algo in ga_baselines.keys()]
         soo_averages = {}
         soo_standard_devs = {}
-        for algo, marker in soo_heuristics:
+        for algo, style in soo_heuristics:
             if len(pareto_solutions[algo]) > 0:
-                soo_averages[algo] = (np.mean(pareto_solutions[algo], axis=0), marker)
-                soo_standard_devs[algo] = (np.cov(pareto_solutions[algo].T), marker)
+                soo_averages[algo] = (np.mean(pareto_solutions[algo], axis=0), style)
+                soo_standard_devs[algo] = (np.cov(pareto_solutions[algo].T), style)
 
         # Determine which heuristics have valid data for Iterations to Hypervolume
         valid_ithv_heuristics = []
@@ -199,21 +202,21 @@ def create_plots():
 
             # Plot SOO comparison points
             for (soo_algo, value) in soo_averages.items():
-                avg, marker = value
+                avg, style = value
                 cov = soo_standard_devs[soo_algo][0]
                 axes_hex[i // n_cols, i % n_cols].plot(
-                    avg[0], avg[1], marker=marker, markersize=6,
-                    markeredgewidth=1.2, color='red',
+                    avg[0], avg[1], marker=style[0], markersize=6,
+                    markeredgewidth=1.2, color=style[1],
                     linestyle='None', label=f"{soo_algo} Mean"
                 )
                 confidence_ellipse(avg, cov, axes_hex[i // n_cols, i % n_cols], n_std=1.96,
-                                   edgecolor='red', label=f"{soo_algo} 95% CI", alpha=0.5)
+                                   color=style[1], label=f"{soo_algo} 95% CI", alpha=0.2)
 
             axes_hex[i // n_cols, i % n_cols].legend(fontsize=8, loc="lower right")
-            axes_hex[i // n_cols, i % n_cols].set_xlabel("Normed Complexity")
+            axes_hex[i // n_cols, i % n_cols].set_xlabel("$f_1$")
             fig_hex.colorbar(hb, ax=axes_hex[i // n_cols, i % n_cols], label='Density')
 
-        fig_hex.supylabel("Pseudo Accuracy")
+        fig_hex.supylabel("$f_2$")
         fig_hex.savefig(f"{final_output_dir}/{datasets_map[problem]}_hex.png")
         plt.close(fig_hex)
 
