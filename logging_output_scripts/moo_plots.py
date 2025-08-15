@@ -17,7 +17,7 @@ complexity = "metrics.elitist_complexity"
 hypervolume = "metrics.hypervolume"
 spread = "metrics.spread"
 
-ga_baselines = {"Baseline c:ga32": ("x", "red"), "Baseline c:ga64": ("+", "cyan"), "Baseline c:ga_no_tuning": ("1", "green")}
+ga_baselines = {"Baseline c:ga32": ("x", "red"), "Baseline c:ga64": ("+", "green"), "Baseline c:ga_no_tuning": ("1", "orange")}
 
 def confidence_ellipse(mean, cov, ax, n_std=1.96, color='red', **kwargs):
     """
@@ -212,7 +212,7 @@ def create_plots():
                 confidence_ellipse(avg, cov, axes_hex[i // n_cols, i % n_cols], n_std=1.96,
                                    color=style[1], label=f"{soo_algo} 95% CI", alpha=0.2)
 
-            axes_hex[i // n_cols, i % n_cols].legend(fontsize=8, loc="lower right")
+            axes_hex[i // n_cols, i % n_cols].legend(fontsize=14, loc="upper right")
             axes_hex[i // n_cols, i % n_cols].set_xlabel("$f_1$")
             fig_hex.colorbar(hb, ax=axes_hex[i // n_cols, i % n_cols], label='Density')
 
