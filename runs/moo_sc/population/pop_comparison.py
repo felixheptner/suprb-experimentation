@@ -9,7 +9,7 @@ from sklearn.utils import Bunch, shuffle
 from sklearn.model_selection import ShuffleSplit
 
 from experiments import Experiment
-from experiments.evaluation import CrossValidate
+from experiments.evaluation import CrossValidate, MOOCrossValidate
 from experiments.mlflow import log_experiment
 from experiments.parameter_search import param_space
 from experiments.parameter_search.optuna import OptunaTuner
@@ -41,9 +41,10 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 @click.command()
 @click.option('-p', '--problem', type=click.STRING, default='airfoil_self_noise')
 @click.option('-j', '--job_id', type=click.STRING, default='NA')
-@click.option('-o', '--optimizer', type=click.STRING, default='nsga3')
+@click.option('-o', '--optimizer', type=click.STRING, default='nsga2')
+@click.option('-c', '--config', type=click.INT, default=32)
 
-def run(problem: str, job_id: str, optimizer: str, projection: bool):
+def run(problem: str, job_id: str, optimizer: str, config: int):
     print(f"Problem is {problem}, with job id {job_id} and optimizer {optimizer}")
 
     X, y = load_dataset(name=problem, return_X_y=True)
@@ -53,8 +54,8 @@ def run(problem: str, job_id: str, optimizer: str, projection: bool):
     estimator = SupRB(
         rule_discovery=es.ES1xLambda(),
         solution_composition=opt_dict[optimizer](n_iter=32,
-                                                 population_size=32,
-                                                 sampler=BetaSolutionSampler(a=1.5, b=1.5, projected=False)),
+                                                 population_size=config,
+                                                 sampler=BetaSolutionSampler(a=1.5, b=1.5)),
         n_iter=32,
         n_rules=4,
         verbose=10,
@@ -96,7 +97,7 @@ def run(problem: str, job_id: str, optimizer: str, projection: bool):
             'solution_composition__mutation_rate', 0, 0.1)
 
 
-    experiment_name = (f'ProjComp {optimizer} p:{projection} j:{job_id} p:{problem}')
+    experiment_name = (f'PopComp {optimizer} ps:{config} j:{job_id} p:{problem}')
     print(experiment_name)
     experiment = Experiment(name=experiment_name,  verbose=10)
 
@@ -106,7 +107,7 @@ def run(problem: str, job_id: str, optimizer: str, projection: bool):
     random_states = np.random.SeedSequence(random_state).generate_state(8)
     experiment.with_random_states(random_states, n_jobs=8)
 
-    evaluation = CrossValidate(
+    evaluation = MOOCrossValidate(
         estimator=estimator, X=X, y=y, random_state=random_state, verbose=10)
 
     experiment.perform(evaluation, cv=ShuffleSplit(

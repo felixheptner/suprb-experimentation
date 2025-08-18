@@ -42,7 +42,7 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 @click.option('-p', '--problem', type=click.STRING, default='airfoil_self_noise')
 @click.option('-j', '--job_id', type=click.STRING, default='NA')
 @click.option('-o', '--optimizer', type=click.STRING, default='nsga3')
-@click.option('-s', '--sampler', type=click.STRING, default='beta')
+@click.option('-c', '--config', type=click.STRING, default='uniform')
 
 def run(problem: str, job_id: str, optimizer: str, sampler: str):
     print(f"Problem is {problem}, with job id {job_id} and optimizer {optimizer}")
@@ -53,8 +53,9 @@ def run(problem: str, job_id: str, optimizer: str, sampler: str):
 
     sampler_dict = {
         "uniform": BetaSolutionSampler(a=1.0, b=1.0, projected=False),
-        "beta": BetaSolutionSampler(a=1.5, b=1.5, projected=False),
-        "beta_projection": BetaSolutionSampler(a=1.5, b=1.5, projected=True),
+        "beta_equi_untuned": BetaSolutionSampler(a=1.5, b=1.5, projected=False),
+        "beta_equi_tuned": BetaSolutionSampler(a=1.5, b=1.5, projected=False),
+        "beta_proj_tuned": BetaSolutionSampler(a=1.5, b=1.5, projected=True),
         "diversity": DiversitySolutionSampler()
     }
 
@@ -102,7 +103,7 @@ def run(problem: str, job_id: str, optimizer: str, sampler: str):
             'solution_composition__mutation_rate', 0, 0.1)
 
         # Sampler
-        if sampler in ("beta", "beta_projection"):
+        if sampler in ("beta_equi_tuned", "beta_proj_tuned"):
             params.solution_composition__sampler__a = trial.suggest_float(
                 'solution_composition__sampler__a', 0.1, 10)
             params.solution_composition__sampler__b = trial.suggest_float(

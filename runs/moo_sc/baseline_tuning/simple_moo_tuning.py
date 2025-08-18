@@ -10,7 +10,7 @@ from sklearn.utils import Bunch, shuffle
 from sklearn.model_selection import ShuffleSplit
 
 from experiments import Experiment
-from experiments.evaluation import CrossValidate
+from experiments.evaluation import CrossValidate, MOOCrossValidate
 from experiments.mlflow import log_experiment
 from experiments.parameter_search import param_space
 from experiments.parameter_search.optuna import OptunaTuner
@@ -157,7 +157,7 @@ def run(problem: str, job_id: str, optimizer: str):
     random_states = np.random.SeedSequence(random_state).generate_state(8)
     experiment.with_random_states(random_states, n_jobs=8)
 
-    evaluation = CrossValidate(
+    evaluation = MOOCrossValidate(
         estimator=estimator, X=X, y=y, random_state=random_state, verbose=10)
 
     experiment.perform(evaluation, cv=ShuffleSplit(
