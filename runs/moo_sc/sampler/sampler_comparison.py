@@ -44,7 +44,7 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 @click.option('-o', '--optimizer', type=click.STRING, default='nsga3')
 @click.option('-c', '--config', type=click.STRING, default='uniform')
 
-def run(problem: str, job_id: str, optimizer: str, sampler: str):
+def run(problem: str, job_id: str, optimizer: str, config: str):
     print(f"Problem is {problem}, with job id {job_id} and optimizer {optimizer}")
 
     X, y = load_dataset(name=problem, return_X_y=True)
@@ -61,7 +61,7 @@ def run(problem: str, job_id: str, optimizer: str, sampler: str):
 
     estimator = SupRB(
         rule_discovery=es.ES1xLambda(),
-        solution_composition=opt_dict[optimizer](n_iter=32, population_size=32, sampler=sampler_dict[sampler]),
+        solution_composition=opt_dict[optimizer](n_iter=32, population_size=32, sampler=sampler_dict[config]),
         n_iter=32,
         n_rules=4,
         verbose=10,
@@ -103,14 +103,14 @@ def run(problem: str, job_id: str, optimizer: str, sampler: str):
             'solution_composition__mutation_rate', 0, 0.1)
 
         # Sampler
-        if sampler in ("beta_equi_tuned", "beta_proj_tuned"):
+        if config in ("beta_equi_tuned", "beta_proj_tuned"):
             params.solution_composition__sampler__a = trial.suggest_float(
                 'solution_composition__sampler__a', 0.1, 10)
             params.solution_composition__sampler__b = trial.suggest_float(
                 'solution_composition__sampler__b', 0.1, 10)
 
 
-    experiment_name = (f'SampComp {optimizer} s:{sampler} j:{job_id} p:{problem}')
+    experiment_name = (f'SampComp {optimizer} c:{config} j:{job_id} p:{problem}')
     print(experiment_name)
     experiment = Experiment(name=experiment_name,  verbose=10)
 

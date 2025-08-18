@@ -115,7 +115,7 @@ def run(problem: str, job_id: str, config: str):
                 params.solution_composition__algorithm_2__crossover__n = params.solution_composition__algorithm_1__crossover__n
             params.solution_composition__algorithm_2__mutation_rate = params.solution_composition__algorithm_1__mutation_rate
 
-    experiment_name = (f'Baseline c:{config} j:{job_id} p:{problem}')
+    experiment_name = (f'Baseline  c:{config} j:{job_id} p:{problem}')
     print(experiment_name)
     experiment = Experiment(name=experiment_name,  verbose=10)
 

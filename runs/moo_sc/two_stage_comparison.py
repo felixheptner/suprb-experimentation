@@ -45,7 +45,7 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 @click.option('-j', '--job_id', type=click.STRING, default='NA')
 @click.option('-o', '--optimizer', type=click.STRING, default='nsga3')
 @click.option('-c', '--config', type=click.STRING, default='ga-moo')
-@click.option('-e', '--early-stopping', type=click.BOOL, default=False)
+@click.option('-e', '--early-stopping', type=click.BOOL, default=True)
 
 def run(problem: str, job_id: str, optimizer: str, config: str, early_stopping: bool):
     print(f"Problem is {problem}, with job id {job_id} and optimizer {optimizer}")
