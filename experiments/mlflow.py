@@ -151,4 +151,7 @@ def log_run(estimator: BaseEstimator):
             try_log_dict(logger.pareto_fronts_, "pareto_fronts.json")
 
 def log_run_result(result: dict):
+    if "test_pf_fitness" in result:
+        test_pf_fitness = result.pop("test_pf_fitness")
+        try_log_dict({"test_pf_fitness": test_pf_fitness.tolist()}, "test_pareto_front.json")
     mlflow.log_metrics(result)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod, ABCMeta
 from numbers import Integral
 from typing import Iterable
+from copy import deepcopy
 
 import numpy as np
 from sklearn.base import BaseEstimator, clone
@@ -134,6 +135,61 @@ class CrossValidate(BaseCrossValidate):
         # Save estimators externally
         estimators = scores.pop('estimator')
 
+        self.estimators_, self.results_ = estimators, scores
+
+        if self.y_scaler:
+            self.results_["y_scaler_var"] = self.y_scaler.var_
+            self.results_["y_scaler_std"] = np.sqrt(self.y_scaler.var_)
+
+            self.results_["test_neg_mean_squared_error_unscaled"] = (
+                self.results_["test_neg_mean_squared_error"]
+                * self.results_["y_scaler_var"]
+            )
+            self.results_["test_neg_mean_absolute_error"] = (
+                self.results_["test_neg_mean_absolute_error"]
+                * self.results_["y_scaler_std"]
+            )
+
+        return self.estimators_, self.results_
+
+class MOOCrossValidate(BaseCrossValidate):
+    """Evaluate the estimator using cross validation."""
+
+    def __init__(
+            self,
+            estimator: BaseEstimator,
+            X: np.ndarray,
+            y: np.ndarray,
+            random_state: int = None,
+            verbose: int = 0,
+            y_scaler=None,
+    ):
+        super().__init__(estimator=estimator, random_state=random_state, verbose=verbose)
+        self.X = X
+        self.y = y
+        self.y_scaler = y_scaler
+
+    def __call__(self, **kwargs) -> tuple[list[BaseEstimator], dict]:
+        scores = self.cross_validate(self.X, self.y, return_indices=True, **kwargs)
+
+        # Save estimators externally
+        estimators = scores.pop('estimator')
+
+        test_indices = scores.pop("indices")
+        test_indices = test_indices["test"]
+
+        pf_test_fitnesses = []
+
+        for i in range(len(estimators)):
+            test_X = self.X[test_indices[i]]
+            test_y = self.y[test_indices[i]]
+            pf = estimators[i].solution_composition_.pareto_front()
+            pf = deepcopy(pf)
+            for solution in pf:
+                solution.fit(test_X, test_y, cache=False)
+            pf_test_fitnesses.append(np.array([solution.fitness_ for solution in pf]))
+
+        scores["test_pf_fitness"] = np.array(pf_test_fitnesses)
         self.estimators_, self.results_ = estimators, scores
 
         if self.y_scaler:
