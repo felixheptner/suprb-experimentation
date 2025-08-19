@@ -7,15 +7,20 @@ from sklearn.base import BaseEstimator, clone
 from sklearn.model_selection import cross_validate
 from sklearn.utils import Bunch
 
+from ..evaluation import MOOCrossValidate, moo_scores_from_scores
+
 from . import metrics
 
 
 def _validate_sklearn_metric(metric: str) -> bool:
-    return metric in sklearn.metrics.SCORERS.keys()
+    return metric in sklearn.metrics.get_scorer_names()
 
 
 def _validate_own_metric(metric: str) -> bool:
     return metric in metrics.__all__
+
+def _validate_own_test_metric(metric: Union[str, Callable]) -> bool:
+    return metric in ["test_hypervolume"]
 
 
 class ParameterTuner(metaclass=ABCMeta):
@@ -55,6 +60,7 @@ class ParameterTuner(metaclass=ABCMeta):
 
         def objective(**params):
             estimator.set_params(**(initial_params | params))
+
             scores = cross_validate(
                 estimator,
                 self.X_train,
@@ -65,12 +71,16 @@ class ParameterTuner(metaclass=ABCMeta):
                 return_estimator=True,
                 verbose=self.verbose,
                 error_score='raise',
+                return_indices=True,
             )
 
             if _validate_sklearn_metric(self.scoring):
                 score = scores['test_score']
             elif _validate_own_metric(self.scoring):
                 score = [getattr(metrics, self.scoring)(_estimator) for _estimator in scores['estimator']]
+            elif _validate_own_test_metric(self.scoring):
+                scores = moo_scores_from_scores(scores, self.X_train, self.y_train)
+                score = scores['test_hypervolume']
             else:
                 raise ValueError('invalid scoring metric')
 

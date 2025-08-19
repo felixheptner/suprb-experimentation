@@ -77,9 +77,9 @@ def run(problem: str, job_id: str, optimizer: str):
         cv=4,
         n_jobs_cv=4,
         n_jobs=4,
-        n_calls=1000,
+        n_calls=2,
         timeout=60*60*24*3 if not sys.gettrace() else 60,
-        scoring='hypervolume',
+        scoring='test_hypervolume',
         verbose=10
     )
 
@@ -152,10 +152,10 @@ def run(problem: str, job_id: str, optimizer: str):
     experiment = Experiment(name=experiment_name,  verbose=10)
 
     tuner = OptunaTuner(X_train=X, y_train=y, **tuning_params)
-    # experiment.with_tuning(space_dict[optimizer], tuner=tuner)
+    experiment.with_tuning(space_dict[optimizer], tuner=tuner)
 
     random_states = np.random.SeedSequence(random_state).generate_state(8)
-    # experiment.with_random_states(random_states, n_jobs=8)
+    experiment.with_random_states(random_states, n_jobs=8)
 
     evaluation = MOOCrossValidate(
         estimator=estimator, X=X, y=y, random_state=random_state, verbose=10)

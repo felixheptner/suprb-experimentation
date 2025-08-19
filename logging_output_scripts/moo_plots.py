@@ -8,7 +8,7 @@ import re
 import os
 from utils import datasets_map
 from sklearn.linear_model import LinearRegression
-from suprb.logging.metrics import spread as metric_spread
+from suprb.logging.metrics import spread as metric_spread, hypervolume as metric_hypervolume
 from matplotlib.patches import Ellipse
 import matplotlib.transforms as transforms
 

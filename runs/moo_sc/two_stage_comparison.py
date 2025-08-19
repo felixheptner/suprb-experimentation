@@ -102,7 +102,7 @@ def run(problem: str, job_id: str, optimizer: str, config: str, early_stopping: 
         n_jobs=4,
         n_calls=1000,
         timeout=60*60*24*3 if not sys.gettrace() else 60,
-        scoring='hypervolume',
+        scoring='test_hypervolume',
         verbose=10
     )
 

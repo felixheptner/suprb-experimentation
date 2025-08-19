@@ -80,7 +80,7 @@ def run(problem: str, job_id: str, config: str):
         n_jobs=4,
         n_calls=1000,
         timeout=60*60*24*3 if not sys.gettrace() else 60,
-        scoring='hypervolume',
+        scoring='neg_mean_squared_error',
         verbose=10
     )
 
