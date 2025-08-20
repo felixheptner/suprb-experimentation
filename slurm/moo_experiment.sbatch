@@ -20,11 +20,9 @@
 # ---------------------------------------------------------------------------
 JOB_DIR=/data/oc-compute03/$USER/suprb-experimentation
 export PYTHONPATH="${PYTHONPATH}:${JOB_DIR}"
-EXPERIMENT="runs/moo_sc/sampler_comparison.py"
+EXPERIMENT="runs/moo_sc/baseline_tuning/simple_moo_tuning.py"
 OPTIMIZER="nsga2"
-PROJECTION="false"
-SAMPLER="uniform"
-TS_CONFIG="ga-ga32"
+CONFIG=""
 # ---------------------------------------------------------------------------
 # 2. Map array‑task ID → dataset name
 # ---------------------------------------------------------------------------
@@ -49,5 +47,4 @@ srun nix-shell "${JOB_DIR}/slurm/default.nix" --command "
     -p ${dataset} \
     -j ${SLURM_ARRAY_JOB_ID} \
     -o ${OPTIMIZER} \
-    -s ${SAMPLER}
 "
