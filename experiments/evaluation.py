@@ -11,15 +11,16 @@ from sklearn.metrics import get_scorer
 from sklearn.model_selection import cross_validate, KFold
 
 from suprb.logging.metrics import hypervolume
+from suprb.solution.fitness import c_norm, pseudo_accuracy
 
-def moo_scores_from_scores(scores: dict, X: np.ndarray, y: np.ndarray) -> dict:
+def _moo_hv_pf_from_scores(scores: dict, X: np.ndarray, y: np.ndarray) -> dict:
     """
-    Revmove train test split indices and add Pareto front fitnesses and hypervolume to the scores.
+    Add Pareto front as (c_norm, PACC) and hypervolume to the scores.
     """
 
     estimators = scores["estimator"]
 
-    test_indices = scores.pop("indices")
+    test_indices = scores["indices"]
     test_indices = test_indices["test"]
 
     pf_test_fitnesses = []
@@ -33,20 +34,46 @@ def moo_scores_from_scores(scores: dict, X: np.ndarray, y: np.ndarray) -> dict:
         for solution in pf:
             solution.fit(test_X, test_y, cache=False)
 
+
+        n = pf[0].fitness.max_genome_length_
         if hasattr(pf[0].fitness, "hv_reference"):
             reference = pf[0].fitness.hv_reference
         else:
             reference = np.array([1.0, 1.0])
+        pf = [
+            [1 - c_norm(solution.complexity_, n), 1 - pseudo_accuracy(solution.error_)] for solution in pf
+        ]
 
-        pf = [solution.fitness_ for solution in pf]
-
-        pf = sorted(pf, key=lambda x: x[0], reverse=True)
+        if isinstance(pf[0], list):
+            pf = sorted(pf, key=lambda x: x[0], reverse=True)
         hv = hypervolume(pf, reference)
         pf_test_fitnesses.append(np.array(pf))
         test_hvs.append(hv)
 
     scores["test_pf_fitness"] = np.array(pf_test_fitnesses)
     scores["test_hypervolume"] = np.array(test_hvs)
+    return scores
+
+def _soo_fitness_from_scores(scores: dict, X: np.ndarray, y: np.ndarray) -> dict:
+    """
+    Add elitist fitness to the scores.
+    """
+
+    estimators = scores["estimator"]
+
+    test_indices = scores["indices"]["test"]
+
+    elitist_fitnesses = []
+
+    for i in range(len(estimators)):
+        test_X = X[test_indices[i]]
+        test_y = y[test_indices[i]]
+        elitist = estimators[i].solution_composition_.elitist()
+        elitist.fit(test_X, test_y, cache=False)
+        elitist_fitnesses.append(elitist.fitness_)
+
+
+    scores["test_elitist_fitness"] = np.array(elitist_fitnesses)
     return scores
 
 def check_scoring(scoring):
@@ -210,7 +237,11 @@ class MOOCrossValidate(BaseCrossValidate):
     def __call__(self, **kwargs) -> tuple[list[BaseEstimator], dict]:
         scores = self.cross_validate(self.X, self.y, return_indices=True, **kwargs)
 
-        scores = moo_scores_from_scores(scores, self.X, self.y)
+        scores = _moo_hv_pf_from_scores(scores, self.X, self.y)
+
+        # scores = SOO_fitness_from_scores(scores, self.X, self.y)
+
+        scores.pop("indices")
 
         # Save estimators externally
         estimators = scores.pop('estimator')

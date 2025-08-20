@@ -20,17 +20,18 @@ from suprb import rule, SupRB
 from suprb.logging.combination import CombinedLogger
 from suprb.logging.multi_objective import MOLogger
 from suprb.logging.stdout import StdoutLogger
-from suprb.optimizer.solution import nsga2, nsga3, spea2
+from suprb.optimizer.solution import nsga2, nsga3, spea2, ga, ts
 from suprb.optimizer.rule import es, origin, mutation
 from suprb.solution.initialization import RandomInit
-import suprb.solution.mixing_model as mixing_model
 
 
 random_state = 42
 
-opt_dict = {"nsga2": nsga2.NonDominatedSortingGeneticAlgorithm2,
-            "nsga3": nsga3.NonDominatedSortingGeneticAlgorithm3,
-            "spea2": spea2.StrengthParetoEvolutionaryAlgorithm2}
+opt_dict = {"nsga2": nsga2.NonDominatedSortingGeneticAlgorithm2(n_iter=32, population_size=32),
+            "nsga3": nsga3.NonDominatedSortingGeneticAlgorithm3(n_iter=32, population_size=32),
+            "spea2": spea2.StrengthParetoEvolutionaryAlgorithm2(n_iter=32, population_size=32),
+            "ga": ts.TwoStageSolutionComposition(ga.GeneticAlgorithm(n_iter=32, population_size=32))
+            }
 
 
 def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
@@ -43,7 +44,7 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 @click.command()
 @click.option('-p', '--problem', type=click.STRING, default='airfoil_self_noise')
 @click.option('-j', '--job_id', type=click.STRING, default='NA')
-@click.option('-o', '--optimizer', type=click.STRING, default='nsga2')
+@click.option('-o', '--optimizer', type=click.STRING, default='ga')
 def run(problem: str, job_id: str, optimizer: str):
     print(f"Problem is {problem}, with job id {job_id} and optimizer {optimizer}")
 
@@ -62,7 +63,7 @@ def run(problem: str, job_id: str, optimizer: str):
             mutation=mutation.HalfnormIncrease(),
             origin_generation=origin.SquaredError(),
         ),
-        solution_composition=opt_dict[optimizer](n_iter=32, population_size=32),
+        solution_composition=opt_dict[optimizer],
         n_iter=2,
         n_rules=4,
         verbose=10,
@@ -79,7 +80,7 @@ def run(problem: str, job_id: str, optimizer: str):
         n_jobs=4,
         n_calls=2,
         timeout=60*60*24*3 if not sys.gettrace() else 60,
-        scoring='test_hypervolume',
+        scoring='test_elitist_fitness',
         verbose=10
     )
 
@@ -143,9 +144,32 @@ def run(problem: str, job_id: str, optimizer: str):
         params.solution_composition__mutation__mutation_rate = trial.suggest_float(
             'solution_composition__mutation_rate', 0, 0.1)
 
+    @param_space()
+    def suprb_ES_GA_space(trial: Trial, params: Bunch):
+        # ES
+        sigma_space = [0, np.sqrt(X.shape[1])]
+
+        params.rule_discovery__mutation__sigma = trial.suggest_float('rule_discovery__mutation__sigma', *sigma_space)
+        params.rule_discovery__init__fitness__alpha = trial.suggest_float(
+            'rule_discovery__init__fitness__alpha', 0.01, 0.2)
+
+        # SC
+        params.solution_composition__algorithm_1__selection__k = trial.suggest_int('solution_composition__selection__k', 3, 10)
+
+        params.solution_composition__algorithm_1__crossover = trial.suggest_categorical(
+            'solution_composition_algorithm_1__crossover', ['NPoint', 'Uniform'])
+        params.solution_composition__algorithm_1__crossover = getattr(ga.crossover, params.solution_composition__algorithm_1__crossover)()
+
+        if isinstance(params.solution_composition__algorithm_1__crossover, ga.crossover.NPoint):
+            params.solution_composition__algorithm_1__crossover__n = trial.suggest_int('solution_composition__crossover__n', 1, 10)
+
+        params.solution_composition__algorithm_1__mutation_rate = trial.suggest_float(
+            'solution_composition_algorithm_1__mutation_rate', 0, 0.1)
+
     space_dict = {"nsga2": suprb_ES_NSGA2_space,
                   "nsga3": suprb_ES_NSGA3_space,
-                  "spea2": suprb_ES_SPEA2_space}
+                  "spea2": suprb_ES_SPEA2_space,
+                  "ga": suprb_ES_GA_space}
 
     experiment_name = (f'{optimizer} Baseline j:{job_id} p:{problem}')
     print(experiment_name)
