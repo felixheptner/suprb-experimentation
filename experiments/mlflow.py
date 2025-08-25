@@ -93,7 +93,7 @@ def _log_experiment(experiment: Experiment, parent_name: str, depth: int) -> dic
 
                 # Log cv average
                 with mlflow.start_run(run_name=f"{run_name}.averaged_cv", nested=True) as average_run:
-                    average_results = {key: np.mean(value) for key, value in experiment.results_.items()}
+                    average_results = {key: np.mean(value) if not isinstance(value, list) else 0 for key, value in experiment.results_.items()}
                     log_run_result(average_results)
             else:
                 average_results = None
@@ -153,5 +153,5 @@ def log_run(estimator: BaseEstimator):
 def log_run_result(result: dict):
     if "test_pf_fitness" in result:
         test_pf_fitness = result.pop("test_pf_fitness")
-        try_log_dict({"test_pf_fitness": test_pf_fitness.tolist()}, "test_pareto_front.json")
+        try_log_dict({"test_pf_fitness": test_pf_fitness}, "test_pareto_front.json")
     mlflow.log_metrics(result)

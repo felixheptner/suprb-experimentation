@@ -96,13 +96,13 @@ def create_plots():
     for problem in config['datasets']:
         counter = 0
         first = True
-        pareto_fronts = {}
-        pareto_solutions = {}
+        train_pareto_fronts = {}
+        train_pareto_solutions = {}
         res_var = None # Initialize res_var here to ensure it's always defined
 
         for heuristic, renamed_heuristic in config['heuristics'].items():
-            pareto_fronts[renamed_heuristic] = []
-            pareto_solutions[renamed_heuristic] = []
+            train_pareto_fronts[renamed_heuristic] = []
+            train_pareto_solutions[renamed_heuristic] = []
             if config["data_directory"] == "mlruns":
                 fold_df = get_df(heuristic, problem)
             else:
@@ -120,18 +120,18 @@ def create_plots():
                 for path in current_res["artifact_uri"]:
                     path = path.split("suprb-experimentation/")[-1]
                     with open(os.path.join(path, "pareto_fronts.json")) as f:
-                        pf = json.load(f)
-                        pf = pf[str(max(int(key) for key in pf.keys()))]
+                        train_pf = json.load(f)
+                        train_pf = train_pf[str(max(int(key) for key in train_pf.keys()))]
                         # The following is necessary as im a bit stupid and accidentally let the logger log ndarrays
                         # Into the dictionary which are not serializable by default and thus got turned into strings -.-
-                        if isinstance(pf, str):
-                            pf = re.sub(r"\s+", ",", pf)
-                            pf = eval(pf)
-                        pareto_fronts[renamed_heuristic].append(pf)
-                        pareto_solutions[renamed_heuristic].extend(pf)
+                        if isinstance(train_pf, str):
+                            train_pf = re.sub(r"\s+", ",", train_pf)
+                            train_pf = eval(train_pf)
+                        train_pareto_fronts[renamed_heuristic].append(train_pf)
+                        train_pareto_solutions[renamed_heuristic].extend(train_pf)
 
-        for heuristic in pareto_fronts.keys():
-            pareto_solutions[heuristic] = np.array(pareto_solutions[heuristic])
+        for heuristic in train_pareto_fronts.keys():
+            train_pareto_solutions[heuristic] = np.array(train_pareto_solutions[heuristic])
 
         # Filter out soo comparison and compute data for soo overlays
         moo_heuristics = [config["heuristics"][algo] for algo in config["heuristics"].keys() if not algo in ga_baselines.keys()]
@@ -139,9 +139,9 @@ def create_plots():
         soo_averages = {}
         soo_standard_devs = {}
         for algo, style in soo_heuristics:
-            if len(pareto_solutions[algo]) > 0:
-                soo_averages[algo] = (np.mean(pareto_solutions[algo], axis=0), style)
-                soo_standard_devs[algo] = (np.cov(pareto_solutions[algo].T), style)
+            if len(train_pareto_solutions[algo]) > 0:
+                soo_averages[algo] = (np.mean(train_pareto_solutions[algo], axis=0), style)
+                soo_standard_devs[algo] = (np.cov(train_pareto_solutions[algo].T), style)
 
         # Determine which heuristics have valid data for Iterations to Hypervolume
         valid_ithv_heuristics = []
@@ -169,17 +169,11 @@ def create_plots():
 
         # Always create these figures as they don't have conditional removal
         fig_hex, axes_hex = plt.subplots(n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True,
-                                         sharey=True, constrained_layout=True)
+                                         sharey=True, constrained_layout=True, squeeze=False)
         fig_kde, axes_kde = plt.subplots(n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True,
-                                         sharey=True, constrained_layout=True)
+                                         sharey=True, constrained_layout=True, squeeze=False)
         fig_hist, axes_hist = plt.subplots(n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True,
-                                         sharey=True, constrained_layout=True)
-
-        # Always make axes a two dimensional ndarray
-        if n_rows == 1:
-            axes_hex = axes_hex[None, :]
-            axes_kde = axes_kde[None, :]
-            axes_hist = axes_hist[None, :]
+                                         sharey=True, constrained_layout=True, squeeze=False)
 
         fig_kde.suptitle(config['datasets'][problem])
         fig_hex.suptitle(config['datasets'][problem])
@@ -189,8 +183,8 @@ def create_plots():
         soo_handles = []
         for i, algo in enumerate(moo_heuristics):
             algo_df = pd.DataFrame({
-                "Normed Complexity": pareto_solutions[algo][:, 0],
-                "Pseudo Accuracy": pareto_solutions[algo][:, 1]
+                "Normed Complexity": train_pareto_solutions[algo][:, 0],
+                "Pseudo Accuracy": train_pareto_solutions[algo][:, 1]
             })
 
             hb = axes_hex[i // n_cols, i % n_cols].hexbin(
@@ -225,8 +219,8 @@ def create_plots():
         soo_handles
         for i, algo in enumerate(moo_heuristics):
             algo_df = pd.DataFrame({
-                "Normed Complexity": pareto_solutions[algo][:, 0],
-                "Pseudo Accuracy": pareto_solutions[algo][:, 1]
+                "Normed Complexity": train_pareto_solutions[algo][:, 0],
+                "Pseudo Accuracy": train_pareto_solutions[algo][:, 1]
             })
 
             sns.kdeplot(
@@ -244,7 +238,7 @@ def create_plots():
         # ================== |Pareto Front| Histograms ==================
 
         for i, algo in enumerate(moo_heuristics):
-            pf_lengths = [len(pf) for pf in pareto_fronts[algo]]
+            pf_lengths = [len(pf) for pf in train_pareto_fronts[algo]]
             max_length = max(pf_lengths)
             axes_hist[i // n_cols, i % n_cols].hist(pf_lengths, bins=np.arange(1, max(33, max_length + 1)), align='left', rwidth=0.9)
             axes_hist[i // n_cols, i % n_cols].set_title(f"{algo}")
@@ -296,8 +290,8 @@ def create_plots():
 
         spread_df = []
 
-        for algo in pareto_fronts.keys():
-            for front in pareto_fronts[algo]:
+        for algo in train_pareto_fronts.keys():
+            for front in train_pareto_fronts[algo]:
                 front_np = np.array(front)
                 sp = metric_spread(front_np)
                 spread_df.append({

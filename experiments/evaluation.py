@@ -47,10 +47,10 @@ def _moo_hv_pf_from_scores(scores: dict, X: np.ndarray, y: np.ndarray) -> dict:
         if isinstance(pf[0], list):
             pf = sorted(pf, key=lambda x: x[0], reverse=True)
         hv = hypervolume(pf, reference)
-        pf_test_fitnesses.append(np.array(pf))
+        pf_test_fitnesses.append(pf)
         test_hvs.append(hv)
 
-    scores["test_pf_fitness"] = np.array(pf_test_fitnesses)
+    scores["test_pf_fitness"] = pf_test_fitnesses
     scores["test_hypervolume"] = np.array(test_hvs)
     return scores
 

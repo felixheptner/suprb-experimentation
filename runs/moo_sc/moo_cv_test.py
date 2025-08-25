@@ -42,9 +42,9 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 
 
 @click.command()
-@click.option('-p', '--problem', type=click.STRING, default='airfoil_self_noise')
+@click.option('-p', '--problem', type=click.STRING, default='parkinson_total')
 @click.option('-j', '--job_id', type=click.STRING, default='NA')
-@click.option('-o', '--optimizer', type=click.STRING, default='ga')
+@click.option('-o', '--optimizer', type=click.STRING, default='nsga3')
 def run(problem: str, job_id: str, optimizer: str):
     print(f"Problem is {problem}, with job id {job_id} and optimizer {optimizer}")
 
@@ -64,7 +64,7 @@ def run(problem: str, job_id: str, optimizer: str):
             origin_generation=origin.SquaredError(),
         ),
         solution_composition=opt_dict[optimizer],
-        n_iter=2,
+        n_iter=4,
         n_rules=4,
         verbose=10,
         logger=CombinedLogger(
@@ -78,9 +78,9 @@ def run(problem: str, job_id: str, optimizer: str):
         cv=4,
         n_jobs_cv=4,
         n_jobs=4,
-        n_calls=2,
+        n_calls=1,
         timeout=60*60*24*3 if not sys.gettrace() else 60,
-        scoring='test_elitist_fitness',
+        scoring='test_hypervolume',
         verbose=10
     )
 
@@ -171,7 +171,7 @@ def run(problem: str, job_id: str, optimizer: str):
                   "spea2": suprb_ES_SPEA2_space,
                   "ga": suprb_ES_GA_space}
 
-    experiment_name = (f'{optimizer} Baseline j:{job_id} p:{problem}')
+    experiment_name = (f'Test {optimizer} j:{job_id} p:{problem}')
     print(experiment_name)
     experiment = Experiment(name=experiment_name,  verbose=10)
 

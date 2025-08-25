@@ -58,11 +58,13 @@ ga_baseline = {
 }
 
 moo_baseline = {
-    "Baseline c:ga32": "GA 32",
-    "Baseline c:ga64": "GA 64",
-    "nsga2 Baseline": "NSGA-II",
-    "nsga3 Baseline": "NSGA-III",
-    "spea2 Baseline": "SPEA2",
+    #"Baseline nsga2": "NSGA-II",
+    "Baseline nsga3": "NSGA-III",
+}
+
+test = {
+    "Test nsga3": "NSGA-III",
+    "Test spea2": "SPEA2"
 }
 
 moo_sampler = {
@@ -104,7 +106,7 @@ def run_main():
     with open("logging_output_scripts/config.json", "r") as f:
         config = json.load(f)
 
-    config["datasets"] = saga_datasets
+    config["datasets"] = saga_datasets if setting is not test else {"parkinson_total": "Parkinson's Telemonitoring"}
 
     config["output_directory"] = setting[0]
     if not os.path.isdir("diss-graphs/graphs"):
@@ -127,24 +129,12 @@ def run_main():
         all_runs_df = mlflow.search_runs(search_all_experiments=True)
         filter_runs(all_runs_df)
 
-    if setting[0] == "diss-graphs/graphs/SAGA":
-        ttest(latex=False, cand1="s:saga1", cand2="s:ga", cand1_name="SAGA1", cand2_name="GA")
-        ttest(latex=False, cand1="s:saga2", cand2="s:ga", cand1_name="SAGA2", cand2_name="GA")
-        ttest(latex=False, cand1="s:saga3", cand2="s:ga", cand1_name="SAGA3", cand2_name="GA")
-        ttest(latex=False, cand1="s:sas", cand2="s:ga", cand1_name="SAGA4", cand2_name="GA")
-        ttest(latex=False, cand1="s:saga1", cand2="s:saga2", cand1_name="SAGA1", cand2_name="SAGA2")
-        ttest(latex=False, cand1="s:saga1", cand2="s:saga3", cand1_name="SAGA1", cand2_name="SAGA3")
-        ttest(latex=False, cand1="s:saga1", cand2="s:sas", cand1_name="SAGA1", cand2_name="SAGA4")
-        ttest(latex=False, cand1="s:saga2", cand2="s:saga3", cand1_name="SAGA2", cand2_name="SAGA3")
-        ttest(latex=False, cand1="s:saga2", cand2="s:sas", cand1_name="SAGA2", cand2_name="SAGA4")
-        ttest(latex=False, cand1="s:saga3", cand2="s:sas", cand1_name="SAGA3", cand2_name="SAGA4")
+    """if setting[0] == "diss-graphs/graphs/MOO":
+        ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline nsga3", cand1_name="NSGA-II", cand2_name="NSGA-III")
+        ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline spea2", cand1_name="NSGA-II", cand2_name="SPEA2")
 
-    if setting[0] == "diss-graphs/graphs/MOO":
-        ttest(latex=True, cand1="nsga2 Baseline", cand2="nsga3 Baseline", cand1_name="NSGA-II", cand2_name="NSGA-III")
-        ttest(latex=True, cand1="nsga2 Baseline", cand2="spea2 Baseline", cand1_name="NSGA-II", cand2_name="SPEA2")
-
-        ttest(latex=True, cand1="nsga3 Baseline", cand2="spea2 Baseline", cand1_name="NSGA-III", cand2_name="SPEA2")
-
+        ttest(latex=True, cand1="Baseline nsga3", cand2="Baseline spea2", cand1_name="NSGA-III", cand2_name="SPEA2")
+    """
     # calvo(ylabel=setting[2])
     moo_plots.create_plots()
     violin_and_swarm_plots.create_plots()
@@ -158,16 +148,19 @@ if __name__ == '__main__':
     moo_ts_noes = ["diss-graphs/graphs/TS", moo_ts_noes, "Solution Composition", False, "mlruns_csv/TS"]
     moo_ts_es = ["diss-graphs/graphs/TSES", moo_ts_es, "Solution Composition", False, "mlruns_csv/TSES"]
     pop_size = ["diss-graphs/graphs/POP", pop_size, "Solution Composition", False, "mlruns_csv/POP"]
+    test = ["diss-graphs/graphs/TEST", test, "Solution Composition", False, "mlruns_csv/TEST"]
 
     # setting = ga_base
-    setting = moo_algos
+    setting = test
+    # ffsetting = moo_algos
     # setting = moo_sampler
     # setting = moo_early
     # setting = moo_ts_noes
     # setting = moo_ts_es
     # setting = pop_size
 
-    mlruns_to_csv(saga_datasets, subdir=setting[-1].split("/")[-1], normalize=True)
+    mlruns_to_csv(saga_datasets if setting is not test else {"parkinson_total": "Parkinson's Telemonitoring"},
+                  subdir=setting[-1].split("/")[-1], normalize=True)
     run_main()
 
 adel = {"SupRB": "SupRB",
