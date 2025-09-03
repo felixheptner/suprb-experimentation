@@ -43,7 +43,7 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 @click.command()
 @click.option('-p', '--problem', type=click.STRING, default='airfoil_self_noise')
 @click.option('-j', '--job_id', type=click.STRING, default='NA')
-@click.option('-o', '--optimizer', type=click.STRING, default='nsga3')
+@click.option('-o', '--optimizer', type=click.STRING, default='nsga2')
 @click.option('-c', '--config', type=click.STRING, default='ga-moo')
 @click.option('-e', '--early-stopping', type=click.BOOL, default=True)
 

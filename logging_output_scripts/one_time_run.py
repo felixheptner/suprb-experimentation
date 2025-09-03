@@ -146,7 +146,7 @@ def run_main():
 
         ttest(latex=True, cand1="Baseline nsga3", cand2="Baseline spea2", cand1_name="NSGA-III", cand2_name="SPEA2")
 
-    # calvo(ylabel=setting[2])
+    calvo(ylabel=setting[2])
     moo_plots.create_plots()
     violin_and_swarm_plots.create_plots()
 
