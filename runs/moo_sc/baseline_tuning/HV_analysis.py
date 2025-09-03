@@ -16,6 +16,7 @@ from suprb.logging.multi_objective import MOLogger
 from problems import scale_X_y
 
 import time
+import os
 
 import matplotlib as mpl
 
@@ -37,18 +38,18 @@ datasets = {
 
 baseline_tuning_parameters = {
     "rd_sigma_mutation": {
-        "combined_cycle_power_plant": 1.8979,
-        "airfoil_self_noise": 2.1987,
-        "concrete_strength": 2.7596,
-        "protein_structure": 2.3731,
-        "parkinson_total": 4.2392
+        "combined_cycle_power_plant": 1.0763,
+        "airfoil_self_noise": 2.19824,
+        "concrete_strength": 2.6034,
+        "protein_structure": 2.6043,
+        "parkinson_total": 4.2419
     },
     "alpha_init": {
-        "combined_cycle_power_plant": 0.0610,
-        "airfoil_self_noise": 0.0246,
-        "concrete_strength": 0.0330,
-        "protein_structure": 0.0261,
-        "parkinson_total": 0.0101
+        "combined_cycle_power_plant": 0.0537,
+        "airfoil_self_noise": 0.0349,
+        "concrete_strength": 0.0585,
+        "protein_structure": 0.0257,
+        "parkinson_total": 0.0126
     },
     "Crossover_Operator": {
         "combined_cycle_power_plant": "Uniform",
@@ -65,11 +66,11 @@ baseline_tuning_parameters = {
         "parkinson_total": None
     },
     "sc_sigma_mutation": {
-        "combined_cycle_power_plant": 0.0052,
-        "airfoil_self_noise": 0.0103,
+        "combined_cycle_power_plant": 0.0076,
+        "airfoil_self_noise": 0.0098,
         "concrete_strength": 0.0079,
-        "protein_structure": 0.0073,
-        "parkinson_total": 0.0153
+        "protein_structure": 0.0067,
+        "parkinson_total": 0.0154
     }
 }
 
@@ -85,7 +86,7 @@ if __name__ == "__main__":
     sc_iter = 32
 
     cm = 1 / 2.54
-    fig, ax = plt.subplots(figsize=(10 * cm, 10 * cm))
+    os.makedirs("./diss-graphs/graphs/misc", exist_ok=True)
 
     for dataset_name, dataset_abbr in datasets.items():
         print(f"Running analysis for {dataset_abbr} ({dataset_name})")
@@ -105,6 +106,7 @@ if __name__ == "__main__":
             warm_start=True,
         )
 
+        # Example external fetch (kept if needed elsewhere)
         data, _ = fetch_openml(name="Concrete_Data", version=1, return_X_y=True)
         data = data.to_numpy()
 
@@ -132,26 +134,37 @@ if __name__ == "__main__":
             fit_params={"cleanup": True},
         )
         end_time = time.time()
-        logger = scores["estimator"][0].logger_
         print("Finished!")
-
         print(f"Time taken: {end_time - start_time:.2f} seconds")
-        axes, plots = plt.subplots()
-        ##### Plot Pareto Fronts #####
-        pareto_front = logger.pareto_fronts_
-        pareto_front = np.array(pareto_front[suprb_iter - 1])
-        hvs = logger.metrics_["hypervolume"]
-        hvs = np.array(list(logger.metrics_["hypervolume"].values()))
 
-        hv = hvs[suprb_iter - 1]
-        spreads = logger.metrics_["spread"]
-        spread = spreads[suprb_iter - 1]
+        # Collect hypervolume trajectories from all folds
+        fold_hvs = []
+        for est in scores["estimator"]:
+            logger = est.logger_
+            hv_dict = logger.metrics_["hypervolume"]
+            # Ensure ordered by iteration index
+            keys = sorted(hv_dict.keys())
+            hv_values = [hv_dict[k] for k in keys][:suprb_iter]
+            # Pad if shorter
+            if len(hv_values) < suprb_iter:
+                hv_values += [np.nan] * (suprb_iter - len(hv_values))
+            fold_hvs.append(hv_values)
 
-        ax.plot(hvs, label=dataset_abbr)
+        fold_hvs = np.array(fold_hvs, dtype=float)  # shape (n_folds, suprb_iter)
+        mean_hv = np.nanmean(fold_hvs, axis=0)
+        std_hv = np.nanstd(fold_hvs, axis=0)
 
-    ax.set_ylabel("Hypervolume")
-    ax.set_xlabel("SupRB Iteration")
-    ax.grid(True)
-    ax.legend()
-    fig.tight_layout()
-    fige.savefig("./diss-graphs/graphs/misc/hv_it.pdf")
+        iterations = np.arange(1, suprb_iter + 1)
+
+        fig, ax = plt.subplots(figsize=(10 * cm, 10 * cm))
+        ax.plot(iterations, mean_hv, label=f"{dataset_abbr} mean HV", color="C0")
+        ax.fill_between(iterations, mean_hv - std_hv, mean_hv + std_hv, color="C0", alpha=0.3, label="±1 std")
+
+        ax.set_ylabel("Hypervolume")
+        ax.set_xlabel("SupRB Iteration")
+        ax.set_title(f"Hypervolume over iterations ({dataset_abbr})")
+        ax.grid(True)
+        ax.legend()
+        fig.tight_layout()
+        fig.savefig(f"./diss-graphs/graphs/misc/hv_it_{dataset_abbr}.pdf")
+        plt.close(fig)

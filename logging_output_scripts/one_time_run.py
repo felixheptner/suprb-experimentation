@@ -30,17 +30,23 @@ def mlruns_to_csv(datasets, subdir, normalize):
         hypervolume = "metrics.hypervolume"
         sc_iters = "metrics.sc_iterations"
         spread = "metrics.spread"
+        test_hypervolume = "metrics.test_hypervolume"
         df = all_runs_df[all_runs_df["tags.mlflow.runName"].str.contains(
             dataset, case=False, na=False) & (all_runs_df["tags.fold"] == 'True')]
-        df = df[["tags.mlflow.runName", "artifact_uri", mse, complexity, hypervolume, spread, sc_iters]]
+        df = df[["tags.mlflow.runName", "artifact_uri", mse, complexity, hypervolume, test_hypervolume,spread, sc_iters]]
         print(f"{dataset}\t\t\t{np.min(df[mse]):.4f}\t{np.max(df[mse]):.4f}\t{np.min(df[complexity]):.4f}\t"
               f"{np.max(df[complexity]):.4f}")
+
+        roots = all_runs_df[all_runs_df["tags.mlflow.runName"].str.contains(
+            dataset, case=False, na=False) & (all_runs_df["tags.root"] == 'True')]
+        roots = roots[["tags.mlflow.runName", "artifact_uri", "params.tuned_params"]]
 
         df[mse] *= -1
         if normalize:
             df[mse] = (df[mse] - np.min(df[mse])) / (np.max(df[mse]) - np.min(df[mse]))
             df[complexity] = (df[complexity] - np.min(df[complexity])) / (np.max(df[complexity]) - np.min(df[complexity]))
         df.to_csv(f"mlruns_csv/{subdir}/{dataset}_all.csv", index=False)
+        roots.to_csv(f"mlruns_csv/{subdir}/{dataset}_roots.csv", index=False)
 
 
 saga = {
@@ -58,8 +64,11 @@ ga_baseline = {
 }
 
 moo_baseline = {
-    #"Baseline nsga2": "NSGA-II",
+    "Baseline nsga2": "NSGA-II",
     "Baseline nsga3": "NSGA-III",
+    "Baseline spea2": "SPEA2",
+    "Baseline c:ga32": "GA 32",
+    "Baseline c:ga64": "GA 64",
 }
 
 test = {
@@ -69,19 +78,21 @@ test = {
 
 moo_sampler = {
     "SampComp nsga2 s:uniform j:733226": "Uniform",
-    "nsga2 Baseline j:730083": r"Beta $\alpha = \beta = 1.5$",
+    "Baseline nsga2": r"Beta $\alpha = \beta = 1.5$",
     "SampComp nsga2 s:beta j:733231": "Beta Tuned",
     "SampComp nsga2 s:beta_projection j:733236": "Beta Projection",
     "SampComp nsga2 s:diversity j:733241": "Diversity",
 }
 
 moo_early = {
-    "nsga2 Baseline j:730083": "NSGA-II",
+    "Baseline nsga2": "NSGA-II",
     "Early Stopping nsga2": "NSGA-II ES",
-    "nsga3 Baseline": "NSGA-III",
+    "Baseline nsga3": "NSGA-III",
     "Early Stopping nsga3": "NSGA-III ES",
-    "spea2 Baseline": "SPEA2",
+    "Baseline spea2": "SPEA2",
     "Early Stopping spea2": "SPEA2 ES",
+    "Baseline c:ga32": "GA 32",
+    "Baseline c:ga64": "GA 64",
 }
 
 moo_ts_noes = {
@@ -129,12 +140,12 @@ def run_main():
         all_runs_df = mlflow.search_runs(search_all_experiments=True)
         filter_runs(all_runs_df)
 
-    """if setting[0] == "diss-graphs/graphs/MOO":
+    if setting[0] == "diss-graphs/graphs/MOO":
         ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline nsga3", cand1_name="NSGA-II", cand2_name="NSGA-III")
         ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline spea2", cand1_name="NSGA-II", cand2_name="SPEA2")
 
         ttest(latex=True, cand1="Baseline nsga3", cand2="Baseline spea2", cand1_name="NSGA-III", cand2_name="SPEA2")
-    """
+
     # calvo(ylabel=setting[2])
     moo_plots.create_plots()
     violin_and_swarm_plots.create_plots()
@@ -151,8 +162,8 @@ if __name__ == '__main__':
     test = ["diss-graphs/graphs/TEST", test, "Solution Composition", False, "mlruns_csv/TEST"]
 
     # setting = ga_base
-    setting = test
-    # ffsetting = moo_algos
+    # setting = test
+    setting = moo_algos
     # setting = moo_sampler
     # setting = moo_early
     # setting = moo_ts_noes
