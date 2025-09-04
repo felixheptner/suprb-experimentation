@@ -86,13 +86,11 @@ moo_sampler = {
 
 moo_early = {
     "Baseline nsga2": "NSGA-II",
-    "Early Stopping nsga2": "NSGA-II ES",
     "Baseline nsga3": "NSGA-III",
-    "Early Stopping nsga3": "NSGA-III ES",
     "Baseline spea2": "SPEA2",
+    "Early Stopping nsga2": "NSGA-II ES",
+    "Early Stopping nsga3": "NSGA-III ES",
     "Early Stopping spea2": "SPEA2 ES",
-    "Baseline c:ga32": "GA 32",
-    "Baseline c:ga64": "GA 64",
 }
 
 moo_ts_noes = {
@@ -140,15 +138,15 @@ def run_main():
         all_runs_df = mlflow.search_runs(search_all_experiments=True)
         filter_runs(all_runs_df)
 
-    if setting[0] == "diss-graphs/graphs/MOO":
+    """if setting[0] == "diss-graphs/graphs/MOO":
         ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline nsga3", cand1_name="NSGA-II", cand2_name="NSGA-III")
         ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline spea2", cand1_name="NSGA-II", cand2_name="SPEA2")
 
         ttest(latex=True, cand1="Baseline nsga3", cand2="Baseline spea2", cand1_name="NSGA-III", cand2_name="SPEA2")
-
+    """
     calvo(ylabel=setting[2])
     moo_plots.create_plots()
-    violin_and_swarm_plots.create_plots()
+    # violin_and_swarm_plots.create_plots()
 
 
 if __name__ == '__main__':

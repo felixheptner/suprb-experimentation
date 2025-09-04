@@ -386,29 +386,30 @@ def plot_iterations_hv(res_var: pd.DataFrame,
     plt.close(fig_ithv)  # Close fig_ithv, not fig_kde
 
 
-def compute_spread_dataframe(train_pareto_fronts: Dict[str, List[List]]) -> pd.DataFrame:
-    spread_rows = []
-    for algo in train_pareto_fronts.keys():
-        for front in train_pareto_fronts[algo]:
+def compute_metric_dataframe(pareto_fronts: Dict[str, List[List]], metric: callable, name: str, *args, **kwargs) -> pd.DataFrame:
+    m_rows = []
+    for algo in pareto_fronts.keys():
+        for front in pareto_fronts[algo]:
             front_np = np.array(front)
-            sp = metric_spread(front_np)
-            spread_rows.append({
+            m = metric(front_np, *args, **kwargs)
+            m_rows.append({
                 "Used_Representation": algo,
-                "Spread": sp
+                name: m
             })
-    return pd.DataFrame(spread_rows)
+    return pd.DataFrame(m_rows)
 
-
-def plot_spread(spread_df: pd.DataFrame,
-                cfg: Dict[str, Any],
-                problem: str,
-                final_output_dir: str) -> None:
+def plot_swarm_violin_metric(metric_df: pd.DataFrame,
+                             cfg: Dict[str, Any],
+                             problem: str,
+                             final_output_dir: str,
+                             name: str) -> None:
     # ================== Spread Swarm Plot ==================
     fig_swarm, ax_swarm = plt.subplots(dpi=400)
     plt.subplots_adjust(left=0.2, right=0.95, top=0.92, bottom=0.22)
-    sns.swarmplot(data=spread_df, x="Used_Representation", y="Spread", ax=ax_swarm, size=3)
+    sns.swarmplot(data=metric_df, x="Used_Representation", y=name, ax=ax_swarm, size=2, palette="tab10",
+                  hue="Used_Representation", legend=False)
     ax_swarm.set_title(f"{cfg['datasets'][problem]}", style="italic", fontsize=14)
-    ax_swarm.set_ylabel("Spread", fontsize=18, weight="bold")
+    ax_swarm.set_ylabel(name, fontsize=18, weight="bold")
     ax_swarm.set_xlabel("")
     ax_swarm.tick_params(axis='x', rotation=15)
     y_min = max(0, min(ax_swarm.get_yticks()))
@@ -421,15 +422,16 @@ def plot_spread(spread_df: pd.DataFrame,
     ax_swarm.set_yticklabels([f'{x:.3g}' for x in y_tick_positions])
     plt.xticks(rotation=15, ha='right', fontsize=12)
     plt.tight_layout()
-    fig_swarm.savefig(f"{final_output_dir}/{datasets_map[problem]}_swarm_spread.png")
+    fig_swarm.savefig(f"{final_output_dir}/{datasets_map[problem]}_swarm_{name}.png")
     plt.close(fig_swarm)
 
     # ================== Spread Violin Plot ==================
     fig_violin, ax_violin = plt.subplots(dpi=400)
     plt.subplots_adjust(left=0.2, right=0.95, top=0.92, bottom=0.22)
-    sns.violinplot(data=spread_df, x="Used_Representation", y="Spread", ax=ax_violin, inner="box", size=3)
+    sns.violinplot(data=metric_df, x="Used_Representation", y=name, ax=ax_violin, inner="box", palette="tab10",
+                   hue="Used_Representation", legend=False, box_width=0.2)
     ax_violin.set_title(f"{cfg['datasets'][problem]}", style="italic", fontsize=14)
-    ax_violin.set_ylabel("Spread", fontsize=18, weight="bold")
+    ax_violin.set_ylabel(name, fontsize=18, weight="bold")
     ax_violin.set_xlabel("")
     ax_violin.tick_params(axis='x', rotation=15)
     ax_violin.set_ylim(y_min, y_max)
@@ -437,7 +439,7 @@ def plot_spread(spread_df: pd.DataFrame,
     ax_violin.set_yticklabels([f'{x:.3g}' for x in y_tick_positions])
     plt.xticks(rotation=15, ha='right', fontsize=12)
     plt.tight_layout()
-    fig_violin.savefig(f"{final_output_dir}/{datasets_map[problem]}_violin_spread.png")
+    fig_violin.savefig(f"{final_output_dir}/{datasets_map[problem]}_violin_{name}.png")
     plt.close(fig_violin)
 
 
@@ -518,8 +520,11 @@ def create_plots():
         plot_iterations_hv(res_var, moo_heuristics, final_output_dir, dataset_key, dataset_title)
 
         # Spread plots
-        spread_df = compute_spread_dataframe(train_pareto_fronts)
-        plot_spread(spread_df, config, problem, final_output_dir)
+        spread_df = compute_metric_dataframe(train_pareto_fronts, metric_spread, "Spread")
+        plot_swarm_violin_metric(spread_df, config, problem, final_output_dir, "Spread")
+        hv_df = compute_metric_dataframe(test_pareto_fronts, metric_hypervolume, "Test Hypervolume",
+                                         reference_point=np.array([1.0, 1.0]))
+        plot_swarm_violin_metric(hv_df, config, problem, final_output_dir, "Test Hypervolume")
 
     generate_latex_tables(tuning_info, config, final_output_dir)
 

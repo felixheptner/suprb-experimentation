@@ -60,6 +60,8 @@ textwidth /= 72.27
 elitist_complexity = "metrics.elitist_complexity"
 mse = "metrics.test_neg_mean_squared_error"
 
+HIGHER_IS_BETTER = ["metrics.hypervolume", "metrics.test_hypervolume"]
+
 
 def smart_print(df, latex):
     if latex:
@@ -134,6 +136,10 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
     df = None
     df = load_data(config)
 
+    for col in HIGHER_IS_BETTER:
+        if col in df.columns:
+            df[col] = 1 - df[col]
+
     # Explore whether throwing away distributional information gives us any
     # insights.
     variants = ({
@@ -170,7 +176,7 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
         i = -1
         for mode, f in variants.items():
             i += 1
-            d = f(df)[config["heuristics"]]
+            d = f(df)[config["heuristics"].keys()]
 
             print(d)
 
@@ -203,7 +209,7 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
             xlabel = f"Probability"  # f"Probability of having the lowest {metrics[metric]}"
             sample = sample.unstack().reset_index(0).rename(columns={"level_0": ylabel, 0: xlabel})
 
-            sns.boxplot(data=sample, y=ylabel, x=xlabel, ax=ax[i], fliersize=0.3)
+            sns.boxplot(data=sample, y=ylabel, x=xlabel, ax=ax[i], fliersize=0.3, palette="tab10", hue=xlabel)
             ax[i].set_title(metrics[metric], style="italic")
             ax[i].set_xlabel(xlabel, weight="bold")
             ax[i].set_ylabel(ylabel, weight="bold")
@@ -234,6 +240,7 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
 
     df = None
     df = load_data(config)
+
     pd.options.mode.chained_assignment = None
 
     hdis = {}
@@ -380,8 +387,7 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
     hdis_ = hdis
     hdis_melt = pd.json_normalize(hdis_, sep=">>").melt()
     hdis = hdis_melt["variable"].str.split(">>", expand=True)
-    hdis.columns = ["n", "Metric", "Dataset", "kind"]
-    del hdis["n"]
+    hdis.columns = ["Metric", "Dataset", "kind"]
     hdis["bound"] = hdis_melt["value"]
     hdis = hdis.set_index(list(hdis.columns[:-1]))
     hdis = hdis.unstack("kind")
