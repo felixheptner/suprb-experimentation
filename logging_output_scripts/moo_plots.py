@@ -266,7 +266,7 @@ def plot_hexbin(moo_heuristics: List[str],
         })
         hb = axes_hex[i // n_cols, i % n_cols].hexbin(
             algo_df['Normed Complexity'], algo_df['Pseudo Accuracy'],
-            gridsize=30, cmap='Blues' if plot_type == "test" else 'Purples',
+            gridsize=30, cmap='Blues' if plot_type == "test" else 'Oranges',
             extent=(0, 1, 0, 1), mincnt=1,
         )
         axes_hex[i // n_cols, i % n_cols].set_title(f"{algo}")
@@ -366,7 +366,7 @@ def plot_iterations_hv(res_var: pd.DataFrame,
     for i, algo in enumerate(valid_ithv_heuristics):
         algo_df = res_var.loc[res_var["Used_Representation"] == algo]
         iters = algo_df["metrics.sc_iterations"]
-        hv = algo_df["metrics.hypervolume"]
+        hv = algo_df["metrics.test_hypervolume"]
         algo_df_plot = pd.DataFrame({
             "Iterations": iters,
             "Hypervolume": hv
@@ -402,8 +402,12 @@ def plot_swarm_violin_metric(metric_df: pd.DataFrame,
                              cfg: Dict[str, Any],
                              problem: str,
                              final_output_dir: str,
-                             name: str) -> None:
-    # ================== Spread Swarm Plot ==================
+                             name: str,
+                             allowed_algos: List[str] | None = None) -> None:
+    # Filter to only MOO heuristics if provided
+    if allowed_algos is not None:
+        metric_df = metric_df[metric_df["Used_Representation"].isin(allowed_algos)]
+
     fig_swarm, ax_swarm = plt.subplots(dpi=400)
     plt.subplots_adjust(left=0.2, right=0.95, top=0.92, bottom=0.22)
     sns.swarmplot(data=metric_df, x="Used_Representation", y=name, ax=ax_swarm, size=2, palette="tab10",
@@ -429,7 +433,7 @@ def plot_swarm_violin_metric(metric_df: pd.DataFrame,
     fig_violin, ax_violin = plt.subplots(dpi=400)
     plt.subplots_adjust(left=0.2, right=0.95, top=0.92, bottom=0.22)
     sns.violinplot(data=metric_df, x="Used_Representation", y=name, ax=ax_violin, inner="box", palette="tab10",
-                   hue="Used_Representation", legend=False, box_width=0.2)
+                   hue="Used_Representation", legend=False)
     ax_violin.set_title(f"{cfg['datasets'][problem]}", style="italic", fontsize=14)
     ax_violin.set_ylabel(name, fontsize=18, weight="bold")
     ax_violin.set_xlabel("")
@@ -443,12 +447,43 @@ def plot_swarm_violin_metric(metric_df: pd.DataFrame,
     plt.close(fig_violin)
 
 
+def prepare_reference_stats(pareto_solutions: Dict[str, np.ndarray],
+                            cfg: Dict[str, Any]) -> Tuple[
+                                Dict[str, Tuple[np.ndarray, Tuple[str, str]]],
+                                Dict[str, Tuple[np.ndarray, Tuple[str, str]]]]:
+    """
+    Prepares mean points and covariance (for confidence ellipses) of reference (SOO) heuristics.
+    Uses cfg['reference_heuristics'] (raw_name -> display_name).
+    """
+    ref_cfg = cfg.get("reference_heuristics", {})
+    averages: Dict[str, Tuple[np.ndarray, Tuple[str, str]]] = {}
+    covs: Dict[str, Tuple[np.ndarray, Tuple[str, str]]] = {}
+
+    for raw_name, display_name in ref_cfg.items():
+        style = ga_baselines.get(raw_name, ("o", "black"))
+        if display_name in pareto_solutions and len(pareto_solutions[display_name]) > 0:
+            data = pareto_solutions[display_name]
+            averages[display_name] = (np.mean(data, axis=0), style)
+            # Need at least 2 points for covariance
+            if data.shape[0] > 1:
+                covs[display_name] = (np.cov(data.T), style)
+            else:
+                # Fallback: zero covariance
+                covs[display_name] = (np.zeros((2, 2)), style)
+    return averages, covs
+
+# (Other existing functions remain unchanged until create_plots)
+
 def create_plots():
     configure_style()
     config = load_config()
     final_output_dir = f"{config['output_directory']}"
 
     tuning_info: Dict[str, Dict[str, Dict]] = {}
+
+    # Merge MOO and reference heuristics for data loading
+    ref_heurs = config.get('reference_heuristics', {})
+    all_heuristics: Dict[str, str] = {**config['heuristics'], **ref_heurs}
 
     for problem in config['datasets']:
         counter = 0
@@ -457,35 +492,41 @@ def create_plots():
         train_pareto_solutions: Dict[str, List[List[float]]] = {}
         test_pareto_fronts: Dict[str, List[List]] = {}
         test_pareto_solutions: Dict[str, List[List[float]]] = {}
-        res_var = None  # Initialize res_var here to ensure it's always defined
+        res_var = None
         tuning_info[problem] = {}
-        # Load and aggregate data
-        for heuristic, renamed_heuristic in config['heuristics'].items():
+
+        # Load runs for all heuristics (MOO + reference)
+        for heuristic, renamed_heuristic in all_heuristics.items():
             train_pareto_fronts[renamed_heuristic] = []
             train_pareto_solutions[renamed_heuristic] = []
             test_pareto_fronts[renamed_heuristic] = []
             test_pareto_solutions[renamed_heuristic] = []
+
             fold_df, root_df = load_fold_dataframe(heuristic, problem, config)
             if root_df is not None and not root_df.empty:
                 string_dict = root_df["params.tuned_params"].iloc[0]
                 string_dict = re.sub(r'([A-Za-z_]\w*)\([^)]*\)', r"'\1'", string_dict)
-                tuning_info[problem][heuristic] = ast.literal_eval(string_dict)
+                try:
+                    tuning_info[problem][heuristic] = ast.literal_eval(string_dict)
+                except Exception:
+                    tuning_info[problem][heuristic] = {}
                 tuning_path = root_df["artifact_uri"].iloc[0].split("suprb-experimentation/")[-1]
                 tuning_path = os.path.join(tuning_path, "param_history.json")
-                with open(tuning_path, "r") as f:
-                    param_history = json.load(f)
-                    if len(param_history.keys()) > 0:
-                        n_calls = len(param_history[list(param_history.keys())[0]])
-                        tuning_info[problem][heuristic]["$n_{trials}$"] = n_calls
+                if os.path.exists(tuning_path):
+                    with open(tuning_path, "r") as f:
+                        param_history = json.load(f)
+                        if len(param_history.keys()) > 0:
+                            n_calls = len(param_history[list(param_history.keys())[0]])
+                            tuning_info[problem][heuristic]["$n_{trials}$"] = n_calls
+
             if fold_df is not None:
                 counter += 1
-                name = [renamed_heuristic] * fold_df.shape[0]
-                current_res = fold_df.assign(Used_Representation=name)
+                name_col = [renamed_heuristic] * fold_df.shape[0]
+                current_res = fold_df.assign(Used_Representation=name_col)
                 if first:
                     first = False
                     res_var = current_res
                 else:
-                    # Adds additional column for plotting
                     res_var = pd.concat([res_var, current_res])
                 process_artifact_paths(current_res, renamed_heuristic,
                                        train_pareto_fronts, train_pareto_solutions,
@@ -495,39 +536,43 @@ def create_plots():
             print(f"No data for problem {problem}, skipping.")
             continue
 
-        # Convert to arrays
-        for heuristic_key in train_pareto_fronts.keys():
-            train_pareto_solutions[heuristic_key] = np.array(train_pareto_solutions[heuristic_key])
-            test_pareto_solutions[heuristic_key] = np.array(test_pareto_solutions[heuristic_key])
+        # Convert collected solution lists into arrays
+        for key in train_pareto_solutions.keys():
+            train_pareto_solutions[key] = np.array(train_pareto_solutions[key])
+            test_pareto_solutions[key] = np.array(test_pareto_solutions[key])
 
-        # Filter out soo comparison and compute data for soo overlays
-        moo_heuristics = [config["heuristics"][algo] for algo in config["heuristics"].keys() if algo not in ga_baselines.keys()]
-        test_soo_averages, test_soo_standard_devs = prepare_soo_stats(test_pareto_solutions, config)
-        train_soo_averages, train_soo_standard_devs = prepare_soo_stats(train_pareto_solutions, config)
+        # MOO heuristics now are exactly the display names of config['heuristics']
+        moo_heuristics = list(config['heuristics'].values())
+
+        # Prepare reference (SOO) overlays
+        test_ref_averages, test_ref_std = prepare_reference_stats(test_pareto_solutions, config)
+        train_ref_averages, train_ref_std = prepare_reference_stats(train_pareto_solutions, config)
 
         n_algs = len(moo_heuristics)
         n_cols, n_rows = determine_layout(n_algs)
         dataset_key = datasets_map[problem]
         dataset_title = config['datasets'][problem]
 
-        # Plot groups
-        plot_hexbin(moo_heuristics, test_pareto_solutions, test_soo_averages, test_soo_standard_devs,
+        # Plots
+        plot_hexbin(moo_heuristics, test_pareto_solutions, test_ref_averages, test_ref_std,
                     n_cols, n_rows, dataset_title, final_output_dir, dataset_key, plot_type="test")
-        plot_hexbin(moo_heuristics, train_pareto_solutions, train_soo_averages, train_soo_standard_devs,
+        plot_hexbin(moo_heuristics, train_pareto_solutions, train_ref_averages, train_ref_std,
                     n_cols, n_rows, dataset_title, final_output_dir, dataset_key, plot_type="train")
         plot_kde(moo_heuristics, test_pareto_solutions, n_cols, n_rows, dataset_title, final_output_dir, dataset_key)
         plot_hist(moo_heuristics, train_pareto_fronts, n_cols, n_rows, dataset_title, final_output_dir, dataset_key)
         plot_iterations_hv(res_var, moo_heuristics, final_output_dir, dataset_key, dataset_title)
 
-        # Spread plots
+        moo_heuristics = list(config['heuristics'].values())
+
+        # Metrics (filtered to only MOO heuristics in plots)
         spread_df = compute_metric_dataframe(train_pareto_fronts, metric_spread, "Spread")
-        plot_swarm_violin_metric(spread_df, config, problem, final_output_dir, "Spread")
+        plot_swarm_violin_metric(spread_df, config, problem, final_output_dir, "Spread", allowed_algos=moo_heuristics)
+
         hv_df = compute_metric_dataframe(test_pareto_fronts, metric_hypervolume, "Test Hypervolume",
                                          reference_point=np.array([1.0, 1.0]))
-        plot_swarm_violin_metric(hv_df, config, problem, final_output_dir, "Test Hypervolume")
-
+        plot_swarm_violin_metric(hv_df, config, problem, final_output_dir, "Test Hypervolume",
+                                 allowed_algos=moo_heuristics)
     generate_latex_tables(tuning_info, config, final_output_dir)
-
 
 if __name__ == '__main__':
     create_plots()

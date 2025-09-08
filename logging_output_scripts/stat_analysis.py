@@ -136,10 +136,6 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
     df = None
     df = load_data(config)
 
-    for col in HIGHER_IS_BETTER:
-        if col in df.columns:
-            df[col] = 1 - df[col]
-
     # Explore whether throwing away distributional information gives us any
     # insights.
     variants = ({
@@ -163,6 +159,7 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
     for metric in metrics:
         if metric not in df or (config["data_directory"] == "mlruns_csv/RBML" and metric == elitist_complexity):
             continue
+        higher_is_better = metric in HIGHER_IS_BETTER
 
         num_heuristics = len(config["heuristics"])
         fig, ax = plt.subplots(len(variants), figsize=(8, 0.5 * num_heuristics), dpi=72)
@@ -195,7 +192,7 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
             # NOTE We fix the random seed here to enable model caching.
             model = cmpbayes.Calvo(
                 d.to_numpy(),
-                higher_better=False, algorithm_labels=d.columns.to_list()).fit(num_samples=chosen_sample_num, random_seed=1)
+                higher_better=higher_is_better, algorithm_labels=d.columns.to_list()).fit(num_samples=chosen_sample_num, random_seed=1)
 
             if check_mcmc:
                 smart_print(az.summary(model.infdata_), latex=latex)
@@ -209,7 +206,7 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
             xlabel = f"Probability"  # f"Probability of having the lowest {metrics[metric]}"
             sample = sample.unstack().reset_index(0).rename(columns={"level_0": ylabel, 0: xlabel})
 
-            sns.boxplot(data=sample, y=ylabel, x=xlabel, ax=ax[i], fliersize=0.3, palette="tab10", hue=xlabel)
+            sns.boxplot(data=sample, y=ylabel, x=xlabel, ax=ax[i], fliersize=0.3, palette="tab10")
             ax[i].set_title(metrics[metric], style="italic")
             ax[i].set_xlabel(xlabel, weight="bold")
             ax[i].set_ylabel(ylabel, weight="bold")

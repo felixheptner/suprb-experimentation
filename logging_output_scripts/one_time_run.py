@@ -58,7 +58,6 @@ saga = {
 }
 
 ga_baseline = {
-    "Baseline c:ga_no_tuning": "No Tuning",
     "Baseline c:ga32": "GA 32",
     "Baseline c:ga64": "GA 64",
 }
@@ -67,8 +66,6 @@ moo_baseline = {
     "Baseline nsga2": "NSGA-II",
     "Baseline nsga3": "NSGA-III",
     "Baseline spea2": "SPEA2",
-    "Baseline c:ga32": "GA 32",
-    "Baseline c:ga64": "GA 64",
 }
 
 test = {
@@ -100,9 +97,11 @@ moo_ts_noes = {
 }
 
 moo_ts_es = {
-    "nsga2 Baseline j:730083": "NSGA-II",
+    "nsga2 Baseline": "NSGA-II",
     "TSComp nsga2 c:ga-moo e:True": "GA - NSGA-II",
     "TSComp nsga2 c:ga_without_tuning-moo e:True": "GA Untuned - NSGA-II",
+    "TSComp nsga2 c:ga-moo_cold_staging e:True": "GA - NSGA-II CS",
+    "TSComp nsga2 c:ga_without_tuning-moo_cold_staging e:True": "GA Untuned - NSGA-II CS",
 }
 
 pop_size = {
@@ -127,6 +126,7 @@ def run_main():
     config["normalize_datasets"] = setting[3]
 
     config["heuristics"] = setting[1]
+    config["reference_heuristics"] = setting[5] if len(setting) > 5 else {}
     config["data_directory"] = setting[4]
 
     with open("logging_output_scripts/config.json", "w") as f:
@@ -138,12 +138,13 @@ def run_main():
         all_runs_df = mlflow.search_runs(search_all_experiments=True)
         filter_runs(all_runs_df)
 
-    """if setting[0] == "diss-graphs/graphs/MOO":
-        ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline nsga3", cand1_name="NSGA-II", cand2_name="NSGA-III")
+    if setting[0] == "diss-graphs/graphs/MOO":
         ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline spea2", cand1_name="NSGA-II", cand2_name="SPEA2")
+        ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline nsga3", cand1_name="NSGA-II", cand2_name="NSGA-III")
 
         ttest(latex=True, cand1="Baseline nsga3", cand2="Baseline spea2", cand1_name="NSGA-III", cand2_name="SPEA2")
-    """
+
+
     calvo(ylabel=setting[2])
     moo_plots.create_plots()
     # violin_and_swarm_plots.create_plots()
@@ -151,9 +152,9 @@ def run_main():
 
 if __name__ == '__main__':
     ga_base = ["diss-graphs/graphs/GA_BASELINE", ga_baseline, "Solution Composition", False, "mlruns_csv/GA_BASELINE"]
-    moo_algos = ["diss-graphs/graphs/MOO", moo_baseline, "Solution Composition", False, "mlruns_csv/MOO"]
+    moo_algos = ["diss-graphs/graphs/MOO", moo_baseline, "Solution Composition", False, "mlruns_csv/MOO", ga_baseline]
     moo_sampler = ["diss-graphs/graphs/SAMPLER", moo_sampler, "Solution Composition", False, "mlruns_csv/SAMPLER"]
-    moo_early = ["diss-graphs/graphs/EARLY", moo_early, "Solution Composition", False, "mlruns_csv/EARLY"]
+    moo_early = ["diss-graphs/graphs/EARLY", moo_early, "Solution Composition", False, "mlruns_csv/EARLY", ga_baseline]
     moo_ts_noes = ["diss-graphs/graphs/TS", moo_ts_noes, "Solution Composition", False, "mlruns_csv/TS"]
     moo_ts_es = ["diss-graphs/graphs/TSES", moo_ts_es, "Solution Composition", False, "mlruns_csv/TSES"]
     pop_size = ["diss-graphs/graphs/POP", pop_size, "Solution Composition", False, "mlruns_csv/POP"]
@@ -161,15 +162,15 @@ if __name__ == '__main__':
 
     # setting = ga_base
     # setting = test
-    setting = moo_algos
+    # setting = moo_algos
     # setting = moo_sampler
     # setting = moo_early
     # setting = moo_ts_noes
-    # setting = moo_ts_es
+    setting = moo_ts_es
     # setting = pop_size
 
     mlruns_to_csv(saga_datasets if setting is not test else {"parkinson_total": "Parkinson's Telemonitoring"},
-                  subdir=setting[-1].split("/")[-1], normalize=True)
+                  subdir=setting[4].split("/")[-1], normalize=True)
     run_main()
 
 adel = {"SupRB": "SupRB",

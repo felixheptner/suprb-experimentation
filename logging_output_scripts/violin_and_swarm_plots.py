@@ -103,7 +103,7 @@ def create_plots():
             for y_label, y_axis in y_axis_label.items():
                 fig, ax = plt.subplots(dpi=400)
                 plt.subplots_adjust(left=0.2, right=0.95, top=0.92, bottom=0.22)
-                ax = function(x='Used_Representation', y=y_axis, data=res_var, size=3)
+                ax = function(x='Used_Representation', y=y_axis, data=res_var)
                 ax_config(ax, y_label)
                 plt.tight_layout()
                 fig.savefig(f"{final_output_dir}/{datasets_map[problem]}_{name}_{y_label}.png")
