@@ -120,7 +120,7 @@ def run(problem: str, job_id: str, optimizer: str, config: str):
     random_states = np.random.SeedSequence(random_state).generate_state(8)
     experiment.with_random_states(random_states, n_jobs=8)
 
-    evaluation = CrossValidate(
+    evaluation = MOOCrossValidate(
         estimator=estimator, X=X, y=y, random_state=random_state, verbose=10)
 
     experiment.perform(evaluation, cv=ShuffleSplit(
