@@ -62,7 +62,16 @@ def run(problem: str, job_id: str, config: str):
     }
 
     estimator = SupRB(
-        rule_discovery=es.ES1xLambda(),
+        rule_discovery=es.ES1xLambda(
+            operator='&',
+            n_iter=1000,
+            delay=30,
+            init=rule.initialization.MeanInit(fitness=rule.fitness.VolumeWu(),
+                                              model=Ridge(alpha=0.01,
+                                                          random_state=random_state)),
+            mutation=mutation.HalfnormIncrease(),
+            origin_generation=origin.SquaredError(),
+        ),
         solution_composition=config_dict[config],
         n_iter=32,
         n_rules=4,

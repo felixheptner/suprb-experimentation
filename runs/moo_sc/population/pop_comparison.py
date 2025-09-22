@@ -4,6 +4,7 @@ import numpy as np
 import click
 import mlflow
 from optuna import Trial
+from sklearn.linear_model import Ridge
 
 from sklearn.utils import Bunch, shuffle
 from sklearn.model_selection import ShuffleSplit
@@ -52,7 +53,16 @@ def run(problem: str, job_id: str, optimizer: str, config: int):
     X, y = shuffle(X, y, random_state=random_state)
 
     estimator = SupRB(
-        rule_discovery=es.ES1xLambda(),
+        rule_discovery=es.ES1xLambda(
+            operator='&',
+            n_iter=1000,
+            delay=30,
+            init=rule.initialization.MeanInit(fitness=rule.fitness.VolumeWu(),
+                                              model=Ridge(alpha=0.01,
+                                                          random_state=random_state)),
+            mutation=mutation.HalfnormIncrease(),
+            origin_generation=origin.SquaredError(),
+        ),
         solution_composition=opt_dict[optimizer](n_iter=32,
                                                  population_size=config,
                                                  sampler=BetaSolutionSampler(a=1.5, b=1.5)),

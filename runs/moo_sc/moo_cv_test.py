@@ -42,7 +42,7 @@ def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
 
 
 @click.command()
-@click.option('-p', '--problem', type=click.STRING, default='parkinson_total')
+@click.option('-p', '--problem', type=click.STRING, default='protein_structure')
 @click.option('-j', '--job_id', type=click.STRING, default='NA')
 @click.option('-o', '--optimizer', type=click.STRING, default='nsga3')
 def run(problem: str, job_id: str, optimizer: str):

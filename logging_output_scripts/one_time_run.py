@@ -16,7 +16,14 @@ saga_datasets = {
     "airfoil_self_noise": "Airfoil Self-Noise",
     "concrete_strength": "Concrete Strength",
     # "energy_cool": "Energy Efficiency Cooling",
-    "protein_structure": "Physiochemical Properties of Protein Tertiary Structure",
+    # "protein_structure": "Physiochemical Properties of Protein Tertiary Structure",
+    "parkinson_total": "Parkinson's Telemonitoring"
+}
+
+datasets_no_pppts = {
+    "combined_cycle_power_plant": "Combined Cycle Power Plant",
+    "airfoil_self_noise": "Airfoil Self-Noise",
+    "concrete_strength": "Concrete Strength",
     "parkinson_total": "Parkinson's Telemonitoring"
 }
 
@@ -58,12 +65,17 @@ saga = {
 }
 
 ga_baseline = {
-    "Baseline c:ga32": "GA 32",
-    "Baseline c:ga64": "GA 64",
+    "Baseline c:ga32 j:734512": "GA 32",
+    "Baseline c:ga64 j:734822": "GA 64",
+}
+
+ga_baseline_more_tuning = {
+    "Baseline c:ga32 j:735284": "GA 32",
+    "Baseline c:ga64 j:735289": "GA 64",
 }
 
 moo_baseline = {
-    "Baseline nsga2": "NSGA-II",
+    "Baseline nsga2 j:734501": "NSGA-II",
     "Baseline nsga3": "NSGA-III",
     "Baseline spea2": "SPEA2",
 }
@@ -73,41 +85,66 @@ test = {
     "Test spea2": "SPEA2"
 }
 
-moo_sampler = {
-    "SampComp nsga2 s:uniform j:733226": "Uniform",
-    "Baseline nsga2": r"Beta $\alpha = \beta = 1.5$",
-    "SampComp nsga2 s:beta j:733231": "Beta Tuned",
-    "SampComp nsga2 s:beta_projection j:733236": "Beta Projection",
-    "SampComp nsga2 s:diversity j:733241": "Diversity",
+moo_sampler_all = {
+    "SampComp nsga2 c:uniform": "Uniform",
+    "Baseline nsga2 j:735294": r"Projection Untuned",
+    "SampComp nsga2 c:beta_equi_untuned": "Equidistant Untuned",
+    "SampComp nsga2 c:beta_equi_tuned": "Equidistant Tuned",
+    "SampComp nsga2 c:beta_proj_tuned": "Projection Tuned",
+    "SampComp nsga2 c:diversity": "Diversity",
 }
 
-moo_early = {
-    "Baseline nsga2": "NSGA-II",
+moo_sampler_equi_proj = {
+    "Baseline nsga2 j:735294": r"Projection Untuned",
+    "SampComp nsga2 c:beta_equi_untuned": "Equidistant Untuned",
+}
+
+moo_early_base_comp = {
+    "Baseline nsga2 j:734501": "NSGA-II",
+    "Early Stopping nsga2": "NSGA-II ES",
     "Baseline nsga3": "NSGA-III",
+    "Early Stopping nsga3": "NSGA-III ES",
     "Baseline spea2": "SPEA2",
+    "Early Stopping spea2": "SPEA2 ES",
+}
+
+moo_early_no_base = {
     "Early Stopping nsga2": "NSGA-II ES",
     "Early Stopping nsga3": "NSGA-III ES",
     "Early Stopping spea2": "SPEA2 ES",
 }
 
-moo_ts_noes = {
-    "nsga2 Baseline j:730083": "NSGA-II",
-    "TSComp nsga2 c:ga-moo j": "GA - NSGA-II",
-    "TSComp nsga2 c:ga_without_tuning-moo ": "GA Untuned - NSGA-II",
+moo_early_nsga2_spea2 = {
+    "Early Stopping nsga2": "NSGA-II ES",
+    "Early Stopping spea2": "SPEA2 ES",
 }
 
-moo_ts_es = {
-    "nsga2 Baseline": "NSGA-II",
-    "TSComp nsga2 c:ga-moo e:True": "GA - NSGA-II",
-    "TSComp nsga2 c:ga_without_tuning-moo e:True": "GA Untuned - NSGA-II",
-    "TSComp nsga2 c:ga-moo_cold_staging e:True": "GA - NSGA-II CS",
-    "TSComp nsga2 c:ga_without_tuning-moo_cold_staging e:True": "GA Untuned - NSGA-II CS",
+moo_early_only_spea2 = {
+    "Early Stopping spea2": "SPEA2 ES",
+}
+
+moo_ts_all = {
+    "Baseline nsga2 j:735294": "Baseline",
+    "TSComp nsga2 c:ga-moo e:False": "Staged Naive",
+    "TSComp nsga2 c:ga-moo e:True": "Staged ES",
+    # "TSComp nsga2 c:ga_without_tuning-moo e:True": "GA Untuned - MOO ES",
+    "TSComp nsga2 c:ga-moo_cold_staging e:True": "Staged ES CS",
+}
+
+moo_ts_naive = {
+    "Baseline nsga2 j:735294": "MOO Baseline",
+    "TSComp nsga2 c:ga-moo e:False": "GA - MOO",
 }
 
 pop_size = {
-    "nsga2 Baseline j:730083": "N = 32",
-    "ProjComp nsga2 ps:64": "N = 64",
-    "ProjComp nsga2 ps:128": "N = 128"
+    "Baseline nsga2": "$N = 32$",
+    "PopComp nsga2 c:64": "$N = 64$",
+    "PopComp nsga2 c:128": "$N = 128$"
+}
+
+more_rules = {
+    "Baseline nsga2": "128 Rules",
+    "MoreRules nsga2": "1024 Rules"
 }
 
 def run_main():
@@ -134,45 +171,75 @@ def run_main():
 
     time.sleep(10)
 
-    if config["data_directory"] == "mlruns":
+    """if config["data_directory"] == "mlruns":
         all_runs_df = mlflow.search_runs(search_all_experiments=True)
         filter_runs(all_runs_df)
 
     if setting[0] == "diss-graphs/graphs/MOO":
-        ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline spea2", cand1_name="NSGA-II", cand2_name="SPEA2")
-        ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline nsga3", cand1_name="NSGA-II", cand2_name="NSGA-III")
+        ttest(latex=True, cand1="Baseline nsga2 j:734501", cand2="Baseline spea2", cand1_name="NSGA-II", cand2_name="SPEA2")
+        ttest(latex=True, cand1="Baseline nsga2 j:734501", cand2="Baseline nsga3", cand1_name="NSGA-II", cand2_name="NSGA-III")
 
         ttest(latex=True, cand1="Baseline nsga3", cand2="Baseline spea2", cand1_name="NSGA-III", cand2_name="SPEA2")
 
+    if setting[0] == "diss-graphs/graphs/EARLY":
+        ttest(latex=True, cand1="Baseline nsga2 j:734501", cand2="Early Stopping nsga2", cand1_name="NSGA-II", cand2_name="NSGA-II ES")
+        ttest(latex=True, cand1="Baseline nsga3", cand2="Early Stopping nsga3", cand1_name="NSGA-III", cand2_name="NSGA-III ES")
+        ttest(latex=True, cand1="Baseline spea2", cand2="Early Stopping spea2", cand1_name="SPEA2", cand2_name="SPEA2 ES")
 
-    calvo(ylabel=setting[2])
+        ttest(latex=True, cand1="Baseline nsga2 j:734501", cand2="Early Stopping spea2", cand1_name="NSGA-II ES", cand2_name="SPEA2 ES")
+
+    if setting[0] == "diss-graphs/graphs/SAMPLER_ALL":
+        ttest(latex=True, cand1="SampComp nsga2 c:beta_equi_untuned", cand2="Baseline nsga2 j:735294", cand1_name="Equidistant Untuned", cand2_name="Projection Untuned")
+        ttest(latex=True, cand1="Baseline nsga2 j:735294", cand2="SampComp nsga2 c:beta_proj_tuned", cand1_name="Projection Untuned", cand2_name="Projection Tuned")
+        ttest(latex=True, cand1="SampComp nsga2 c:beta_equi_untuned", cand2="SampComp nsga2 c:beta_equi_tuned", cand1_name="Equidistant Untuned", cand2_name="Equidistant Tuned")
+
+        ttest(latex=True, cand1="SampComp nsga2 c:uniform", cand2="Baseline nsga2 j:735294", cand1_name="Uniform", cand2_name="Projection Untuned")
+        ttest(latex=True, cand1="SampComp nsga2 c:uniform", cand2="SampComp nsga2 c:diversity", cand1_name="Uniform", cand2_name="Diversity")
+        ttest(latex=True, cand1="Baseline nsga2 j:735294", cand2="SampComp nsga2 c:diversity", cand1_name="Projection Untuned", cand2_name="Diversity")
+
+
+    if setting[0] == "diss-graphs/graphs/TS_ALL":
+        ttest(latex=True, cand1="Baseline nsga2 j:735294", cand2="TSComp nsga2 c:ga-moo e:False", cand1_name="MOO Baseline", cand2_name="GA - MOO")
+        ttest(latex=True, cand1="TSComp nsga2 c:ga-moo e:True", cand2="TSComp nsga2 c:ga-moo_cold_staging e:True", cand1_name="Staged ES", cand2_name="Staged ES CS")
+        ttest(latex=True, cand1="Baseline nsga2 j:735294", cand2="TSComp nsga2 c:ga-moo_cold_staging e:True", cand1_name="MOO Baseline", cand2_name="Staged ES CS")"""
+
+    # calvo(ylabel=setting[2])
     moo_plots.create_plots()
+
     # violin_and_swarm_plots.create_plots()
 
 
 if __name__ == '__main__':
     ga_base = ["diss-graphs/graphs/GA_BASELINE", ga_baseline, "Solution Composition", False, "mlruns_csv/GA_BASELINE"]
-    moo_algos = ["diss-graphs/graphs/MOO", moo_baseline, "Solution Composition", False, "mlruns_csv/MOO", ga_baseline]
-    moo_sampler = ["diss-graphs/graphs/SAMPLER", moo_sampler, "Solution Composition", False, "mlruns_csv/SAMPLER"]
-    moo_early = ["diss-graphs/graphs/EARLY", moo_early, "Solution Composition", False, "mlruns_csv/EARLY", ga_baseline]
-    moo_ts_noes = ["diss-graphs/graphs/TS", moo_ts_noes, "Solution Composition", False, "mlruns_csv/TS"]
-    moo_ts_es = ["diss-graphs/graphs/TSES", moo_ts_es, "Solution Composition", False, "mlruns_csv/TSES"]
-    pop_size = ["diss-graphs/graphs/POP", pop_size, "Solution Composition", False, "mlruns_csv/POP"]
-    test = ["diss-graphs/graphs/TEST", test, "Solution Composition", False, "mlruns_csv/TEST"]
+    moo_algos = ["diss-graphs/graphs/MOO", moo_baseline, "Configuration", False, "mlruns_csv/MOO", ga_baseline_more_tuning]
+    moo_sampler_all = ["diss-graphs/graphs/SAMPLER_ALL", moo_sampler_all, "Configuration", False, "mlruns_csv/SAMPLER_ALL"]
+    moo_sampler_equi_proj = ["diss-graphs/graphs/SAMPLER_EQUI_PROJ", moo_sampler_equi_proj, "Configuration", False, "mlruns_csv/SAMPLER_EQUI_PROJ"]
+    moo_early_base_comp = ["diss-graphs/graphs/EARLY", moo_early_base_comp, "Configuration", False, "mlruns_csv/EARLY", ga_baseline_more_tuning]
+    moo_early_no_base = ["diss-graphs/graphs/EARLY_NO_BASE", moo_early_no_base, "Configuration", False, "mlruns_csv/EARLY_NO_BASE", ga_baseline_more_tuning]
+    moo_early_nsga2_spea2 = ["diss-graphs/graphs/EARLY_NO_BASE_NSGA2_SPEA2", moo_early_nsga2_spea2, "Configuration", False, "mlruns_csv/EARLY_NO_BASE_NSGA2_SPEA2", ga_baseline_more_tuning]
+    moo_early_only_spea2 = ["diss-graphs/graphs/EARLY_NO_BASE_SPEA2", moo_early_only_spea2, "Configuration", False, "mlruns_csv/EARLY_NO_BASE_SPEA2", ga_baseline_more_tuning]
+    moo_ts_all = ["diss-graphs/graphs/TS_ALL", moo_ts_all, "Configuration", False, "mlruns_csv/TS_ALL"]
+    moo_ts_naive = ["diss-graphs/graphs/TS_NAIVE", moo_ts_naive, "Configuration", False, "mlruns_csv/TS_NAIVE"]
+    pop_size = ["diss-graphs/graphs/POP", pop_size, "Configuration", False, "mlruns_csv/POP"]
+    more_rules = ["diss-graphs/graphs/MORE_RULES", more_rules, "Configuration", False, "mlruns_csv/MORE_RULES"]
+    test = ["diss-graphs/graphs/TEST", test, "Configuration", False, "mlruns_csv/TEST"]
 
     # setting = ga_base
     # setting = test
     # setting = moo_algos
-    # setting = moo_sampler
-    # setting = moo_early
-    # setting = moo_ts_noes
-    setting = moo_ts_es
+    # setting = moo_sampler_all
+    # setting = moo_sampler_equi_proj
+    # setting = moo_early_base_comp
+    setting = moo_early_no_base
+    # setting = moo_early_nsga2_spea2
+    # setting = moo_early_only_spea2
+    # setting = moo_ts_all
+    # setting = moo_ts_naive
     # setting = pop_size
+    # setting = more_rules
 
     mlruns_to_csv(saga_datasets if setting is not test else {"parkinson_total": "Parkinson's Telemonitoring"},
                   subdir=setting[4].split("/")[-1], normalize=True)
     run_main()
 
-adel = {"SupRB": "SupRB",
-        "Random Forest": "RF",
-        "Decision Tree": "DT", }
+    print(f"\nFinished creating plots for {setting[4].split("/")[-1]}")

@@ -11,7 +11,7 @@ from sklearn.linear_model import LinearRegression
 from suprb.logging.metrics import spread as metric_spread, hypervolume as metric_hypervolume
 from matplotlib.patches import Ellipse
 import matplotlib.transforms as transforms
-from typing import Dict, List, Tuple, Any, Union
+from typing import Dict, List, Tuple, Any, Union, Optional
 import ast
 
 mse = "metrics.test_neg_mean_squared_error"
@@ -19,7 +19,9 @@ complexity = "metrics.elitist_complexity"
 hypervolume = "metrics.hypervolume"
 spread = "metrics.spread"
 
-ga_baselines = {"Baseline c:ga32": ("x", "red"), "Baseline c:ga64": ("+", "green"), "Baseline c:ga_no_tuning": ("1", "orange")}
+ga_baselines = {"Baseline c:ga32 j:735284": ("x", "red"),
+                "Baseline c:ga64 j:735289": ("+", "green"),
+                }
 
 # Mapping raw parameter keys to nicer LaTeX display names
 PARAM_NAME_MAP = {
@@ -28,11 +30,86 @@ PARAM_NAME_MAP = {
     "solution_composition__crossover": "\\acs{SC} Crossover",
     "solution_composition__crossover__n": "\\acs{SC} $n_{cross}$",
     "solution_composition__mutation__mutation_rate": "\\acs{SC} $\\sigma_{mut}$",
+    "solution_composition__sampler__a": "Sampler $\\alpha$",
+    "solution_composition__sampler__b": "Sampler $\\beta$",
+    "solution_composition__algorithm_1__crossover": "\\acs{GA} Crossover",
+    "solution_composition__algorithm_1__crossover__n": "\\acs{GA} $n_{cross}$",
+    "solution_composition__algorithm_1__mutation_rate": "\\acs{GA} $\\sigma_{mut}$",
+    "solution_composition__algorithm_1__selection__k": "\\acs{GA} $k_{sel}$",
+    "solution_composition__algorithm_2__crossover": "\\acs{MOO} Crossover",
+    "solution_composition__algorithm_2__crossover__n": "\\acs{MOO} $n_{cross}$",
+    "solution_composition__algorithm_2__mutation_rate": "\\acs{MOO} $\\sigma_{mut}$",
+
 }
 
-def generate_latex_tables(tuning_params: Dict[str, Dict[str, Dict]],
-                          config: Dict[str, Any],
-                          final_output_dir: str) -> None:
+
+def _esc_tex(s: str) -> str:
+    return str(s).replace('_', r'\_')
+
+def f_1_pareto_sacrifice(moo_front: np.ndarray, ga_front: np.ndarray) -> float:
+    """
+    Compute the f_1 distance from the one GA solution to the solution along the MOO Pareto front with the minimum
+    f_1 value whose f2 value is smaller than the GA solution's f_2 value. If no MOO solution has f_2 smaller than the GA solution's f_2,
+    choose the MOO solution with the smallest f_2.
+    """
+    if len(moo_front) == 0 or len(ga_front) == 0:
+        return np.nan
+    ga_sol = ga_front[0]
+    ga_f2 = ga_sol[1]
+    # Filter MOO front to only those with f2 less than ga_f2
+    filtered_moo = moo_front[moo_front[:, 1] <= ga_f2]
+    if len(filtered_moo) == 0:
+        closest_moo = moo_front[np.argmin(moo_front[:, 1])]
+        return np.nan
+    else:
+        closest_moo = filtered_moo[np.argmin(filtered_moo[:, 0])]
+        return closest_moo[0] - ga_sol[0]
+
+
+def generate_pareto_sacrifice_undefined_table(
+    per_problem_nan: Dict[str, Dict[str, Optional[float]]],
+    cfg: Dict[str, Any],
+    moo_algos: List[str],
+    final_output_dir: str
+) -> None:
+    """
+    One LaTeX table: rows=datasets, cols=moo_algos, values=\% of NaNs in $f_1$ Pareto sacrifice
+    """
+    os.makedirs(final_output_dir, exist_ok=True)
+    header = ["Dataset"] + moo_algos
+    col_format = "l" + "c" * len(moo_algos)
+
+    lines = [
+        r"\begin{table}[ht]",
+        r"\centering",
+        r"\caption{Percentage of \textit{Pareto Sacrifice undefined} (NaN) per algorithm and dataset.}",
+        r"\label{tab:pareto_sacrifice_undefined_" + "".join(moo_algos).lower() + "}",
+        r"\begin{tabular}{" + col_format + r"}",
+        r"\hline",
+        " & ".join([_esc_tex(h) for h in header]) + r" \\",
+        r"\hline"
+    ]
+
+    # Keep dataset order from cfg
+    for problem in cfg["datasets"]:
+        ds_name = _esc_tex(datasets_map[problem].upper())
+        stats = per_problem_nan.get(problem, {})
+        row_vals: List[str] = []
+        for algo in moo_algos:
+            v = stats.get(algo, None)
+            cell = "N/A" if v is None or np.isnan(v) else f"{v:.1f}~\\%"
+            row_vals.append(cell)
+        lines.append(ds_name + " & " + " & ".join(row_vals) + r" \\")
+    lines += [r"\hline", r"\end{tabular}", r"\end{table}"]
+
+    out_path = os.path.join(final_output_dir, "pareto_sacrifice_undefined.tex")
+    with open(out_path, "w") as f:
+        f.write("\n".join(lines))
+
+
+def generate_tuning_tables(tuning_params: Dict[str, Dict[str, Dict]],
+                           config: Dict[str, Any],
+                           final_output_dir: str) -> None:
     """
     Generate one LaTeX table per heuristic (renamed) showing tuned parameter values across datasets.
     Rows: datasets
@@ -46,9 +123,6 @@ def generate_latex_tables(tuning_params: Dict[str, Dict[str, Dict]],
     heuristic_keys = set()
     for problem_dict in tuning_params.values():
         heuristic_keys.update(problem_dict.keys())
-
-    def esc(tex: str) -> str:
-        return str(tex).replace('_', r'\_')
 
     for heuristic_key in sorted(heuristic_keys):
         display_name = heuristic_display_map.get(heuristic_key, heuristic_key)
@@ -74,7 +148,8 @@ def generate_latex_tables(tuning_params: Dict[str, Dict[str, Dict]],
         lines = [
             r"\begin{table}[ht]",
             r"\centering",
-            r"\caption{Tuned parameters for " + esc(display_name) + r"}",
+            r"\caption{Tuned parameters for " + _esc_tex(display_name) + r"}",
+            r"\adjustbox{max width=\textwidth}{"
             r"\begin{tabular}{" + col_format + r"}",
             r"\hline",
             " & ".join(header_cols) + r" \\",
@@ -92,9 +167,9 @@ def generate_latex_tables(tuning_params: Dict[str, Dict[str, Dict]],
                         v = f"{v:.4f}"
                 else:
                     v = "N/A"
-                row_vals.append(esc(v))
-            lines.append(esc(dataset_name) + " & " + " & ".join(row_vals) + r" \\")
-        lines += [r"\hline", r"\end{tabular}", r"\end{table}"]
+                row_vals.append(_esc_tex(v))
+            lines.append(_esc_tex(dataset_name) + " & " + " & ".join(row_vals) + r" \\")
+        lines += [r"\hline", r"\end{tabular}}", r"\end{table}"]
 
         content = "\n".join(lines)
         file_safe = display_name.lower().replace(" ", "_")
@@ -264,26 +339,26 @@ def plot_hexbin(moo_heuristics: List[str],
             "Normed Complexity": pareto_solutions[algo][:, 0],
             "Pseudo Accuracy": pareto_solutions[algo][:, 1]
         })
-        hb = axes_hex[i // n_cols, i % n_cols].hexbin(
+        hb = axes_hex[i % n_rows, i // n_rows].hexbin(
             algo_df['Normed Complexity'], algo_df['Pseudo Accuracy'],
             gridsize=30, cmap='Blues' if plot_type == "test" else 'Oranges',
             extent=(0, 1, 0, 1), mincnt=1,
         )
-        axes_hex[i // n_cols, i % n_cols].set_title(f"{algo}")
+        axes_hex[i % n_rows, i // n_rows].set_title(f"{algo}")
         # Plot SOO comparison points
         for (soo_algo, value) in soo_averages.items():
             avg, style = value
             cov = soo_standard_devs[soo_algo][0]
-            axes_hex[i // n_cols, i % n_cols].plot(
+            axes_hex[i % n_rows, i // n_rows].plot(
                 avg[0], avg[1], marker=style[0], markersize=6,
                 markeredgewidth=1.2, color=style[1],
                 linestyle='None', label=f"{soo_algo} Mean"
             )
-            confidence_ellipse(avg, cov, axes_hex[i // n_cols, i % n_cols], n_std=1.96,
+            confidence_ellipse(avg, cov, axes_hex[i % n_rows, i // n_rows], n_std=1.96,
                                color=style[1], label=f"{soo_algo} 95% CI", alpha=0.2)
-        axes_hex[i // n_cols, i % n_cols].legend(fontsize=14, loc="upper right")
-        axes_hex[i // n_cols, i % n_cols].set_xlabel("$f_1$")
-        fig_hex.colorbar(hb, ax=axes_hex[i // n_cols, i % n_cols], label='Density')
+        axes_hex[i % n_rows, i // n_rows].legend(fontsize=14, loc="upper right")
+        axes_hex[i % n_rows, i // n_rows].set_xlabel("$f_1$")
+        fig_hex.colorbar(hb, ax=axes_hex[i % n_rows, i // n_rows], label='Density')
     fig_hex.supylabel("$f_2$")
 
     # Create filename based on plot_type
@@ -292,28 +367,66 @@ def plot_hexbin(moo_heuristics: List[str],
     plt.close(fig_hex)
 
 
-def plot_kde(moo_heuristics: List[str],
-             test_pareto_solutions: Dict[str, np.ndarray],
-             n_cols: int, n_rows: int,
-             title: str, final_output_dir: str, dataset_key: str) -> None:
-    fig_kde, axes_kde = plt.subplots(n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True,
-                                     sharey=True, constrained_layout=True, squeeze=False)
-    fig_kde.suptitle(title)
+def plot_mean_shift_arrows(moo_heuristics: List[str],
+                           train_pareto_solutions: Dict[str, np.ndarray],
+                           test_pareto_solutions: Dict[str, np.ndarray],
+                           n_cols: int, n_rows: int,
+                           title: str, final_output_dir: str, dataset_key: str,
+                           n_bins: int = 20) -> None:
+    """
+    Plot mean shift arrows of f1 between training and test per f0 bin.
+    Scatter + arrows are centered at the bin midpoint.
+    """
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(18, 5 * n_rows),
+                             sharex=True, sharey=True, constrained_layout=True, squeeze=False)
+    fig.suptitle(f"{title} (Mean shift arrows)")
+
     for i, algo in enumerate(moo_heuristics):
-        algo_df = pd.DataFrame({
-            "Normed Complexity": test_pareto_solutions[algo][:, 0],
-            "Pseudo Accuracy": test_pareto_solutions[algo][:, 1]
-        })
-        sns.kdeplot(
-            data=algo_df, x='Normed Complexity', y='Pseudo Accuracy',
-            fill=True, cmap='Blues', ax=axes_kde[i // n_cols, i % n_cols],
-            thresh=0.05, levels=100, clip=((0, 1), (0, 1))
-        )
-        axes_kde[i // n_cols, i % n_cols].set_title(f"{algo}")
-        axes_kde[i // n_cols, i % n_cols].set_xlim(0, 1)
-        axes_kde[i // n_cols, i % n_cols].set_ylim(0, 1)
-    fig_kde.savefig(f"{final_output_dir}/{dataset_key}_kde.png")
-    plt.close(fig_kde)
+        ax = axes[i // n_cols, i % n_cols]
+        train = train_pareto_solutions[algo]
+        test = test_pareto_solutions[algo]
+
+        if train.shape[0] == 0 or test.shape[0] == 0:
+            ax.set_title(f"{algo} (no data)")
+            continue
+
+        f0 = train[:, 0]
+        f1_train = train[:, 1]
+        f1_test = test[:, 1]
+
+        bins = np.linspace(f0.min(), f0.max(), n_bins + 1)
+        bin_indices = np.digitize(f0, bins) - 1
+
+        arrow_data = []
+        for j in range(n_bins):
+            mask = bin_indices == j
+            if np.any(mask):
+                bin_center = (bins[j] + bins[j + 1]) / 2
+                mean_train = f1_train[mask].mean()
+                mean_test = f1_test[mask].mean()
+                arrow_data.append((bin_center, mean_train, mean_test))
+
+        for bin_center, mean_train, mean_test in arrow_data:
+            ax.arrow(bin_center, mean_train,
+                     0, mean_test - mean_train,
+                     head_width=0.01, head_length=0.01,
+                     length_includes_head=True,
+                     color="steelblue", alpha=0.8)
+        ax.scatter([d[0] for d in arrow_data], [d[1] for d in arrow_data],
+                   label="fTrain mean $f_1$", color="blue", marker="o", s=30)
+        ax.scatter([d[0] for d in arrow_data], [d[2] for d in arrow_data],
+                   label="Test mean $f_1$", color="red", marker="x", s=40)
+
+        ax.set_title(f"{algo}")
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.legend(fontsize=10)
+
+    fig.supxlabel("$f_0$")
+    fig.supylabel("$f_1$")
+    filename = f"{dataset_key}_mean_shift.png"
+    fig.savefig(f"{final_output_dir}/{filename}")
+    plt.close(fig)
 
 
 def plot_hist(moo_heuristics: List[str],
@@ -389,7 +502,7 @@ def plot_iterations_hv(res_var: pd.DataFrame,
 def compute_metric_dataframe(pareto_fronts: Dict[str, List[List]], metric: callable, name: str, *args, **kwargs) -> pd.DataFrame:
     m_rows = []
     for algo in pareto_fronts.keys():
-        for front in pareto_fronts[algo]:
+        for idx, front in enumerate(pareto_fronts[algo]):
             front_np = np.array(front)
             m = metric(front_np, *args, **kwargs)
             m_rows.append({
@@ -398,7 +511,21 @@ def compute_metric_dataframe(pareto_fronts: Dict[str, List[List]], metric: calla
             })
     return pd.DataFrame(m_rows)
 
-def plot_swarm_violin_metric(metric_df: pd.DataFrame,
+def compute_ga_comparison_dataframe(pareto_fronts: Dict[str, List[List]], ref_name:str):
+    m_rows = []
+    ref_fronts = pareto_fronts[ref_name]
+    for algo in pareto_fronts.keys():
+        for idx, front in enumerate(pareto_fronts[algo]):
+            front_np = np.array(front)
+            ref_front_np = np.array(ref_fronts[idx])
+            m = f_1_pareto_sacrifice(front_np, ref_front_np)
+            m_rows.append({
+                "Used_Representation": algo,
+                f"$f_1$ Pareto sacrifice to {ref_name}": m
+            })
+    return pd.DataFrame(m_rows)
+
+def plot_violin_metric(metric_df: pd.DataFrame,
                              cfg: Dict[str, Any],
                              problem: str,
                              final_output_dir: str,
@@ -408,27 +535,8 @@ def plot_swarm_violin_metric(metric_df: pd.DataFrame,
     if allowed_algos is not None:
         metric_df = metric_df[metric_df["Used_Representation"].isin(allowed_algos)]
 
-    fig_swarm, ax_swarm = plt.subplots(dpi=400)
-    plt.subplots_adjust(left=0.2, right=0.95, top=0.92, bottom=0.22)
-    sns.swarmplot(data=metric_df, x="Used_Representation", y=name, ax=ax_swarm, size=2, palette="tab10",
-                  hue="Used_Representation", legend=False)
-    ax_swarm.set_title(f"{cfg['datasets'][problem]}", style="italic", fontsize=14)
-    ax_swarm.set_ylabel(name, fontsize=18, weight="bold")
-    ax_swarm.set_xlabel("")
-    ax_swarm.tick_params(axis='x', rotation=15)
-    y_min = max(0, min(ax_swarm.get_yticks()))
-    y_max = max(ax_swarm.get_yticks())
-    num_ticks = 7
-    y_tick_positions = np.linspace(y_min, y_max, num_ticks)
-    y_tick_positions = np.round(y_tick_positions, 3)
-    ax_swarm.set_ylim(y_min, y_max)
-    ax_swarm.set_yticks(y_tick_positions)
-    ax_swarm.set_yticklabels([f'{x:.3g}' for x in y_tick_positions])
-    plt.xticks(rotation=15, ha='right', fontsize=12)
-    plt.tight_layout()
-    fig_swarm.savefig(f"{final_output_dir}/{datasets_map[problem]}_swarm_{name}.png")
-    plt.close(fig_swarm)
-
+    # Filter out Nan values from the metric column (turns out to be unnecessary)
+    metric_df = metric_df[metric_df[name].notna()]
     # ================== Spread Violin Plot ==================
     fig_violin, ax_violin = plt.subplots(dpi=400)
     plt.subplots_adjust(left=0.2, right=0.95, top=0.92, bottom=0.22)
@@ -437,7 +545,15 @@ def plot_swarm_violin_metric(metric_df: pd.DataFrame,
     ax_violin.set_title(f"{cfg['datasets'][problem]}", style="italic", fontsize=14)
     ax_violin.set_ylabel(name, fontsize=18, weight="bold")
     ax_violin.set_xlabel("")
-    ax_violin.tick_params(axis='x', rotation=15)
+    ax_violin.tick_params(axis='x', rotation=15)#
+    y_min = min(ax_violin.get_yticks())
+    y_max = max(ax_violin.get_yticks())
+    num_ticks = 7
+    y_tick_positions = np.linspace(y_min, y_max, num_ticks)
+    if y_min <= 0 <= y_max:
+
+        y_tick_positions = np.concat([y_tick_positions, [0]])
+    y_tick_positions = np.round(y_tick_positions, 3)
     ax_violin.set_ylim(y_min, y_max)
     ax_violin.set_yticks(y_tick_positions)
     ax_violin.set_yticklabels([f'{x:.3g}' for x in y_tick_positions])
@@ -453,12 +569,12 @@ def prepare_reference_stats(pareto_solutions: Dict[str, np.ndarray],
                                 Dict[str, Tuple[np.ndarray, Tuple[str, str]]]]:
     """
     Prepares mean points and covariance (for confidence ellipses) of reference (SOO) heuristics.
+    Extracts soo_pareto_fronts
     Uses cfg['reference_heuristics'] (raw_name -> display_name).
     """
     ref_cfg = cfg.get("reference_heuristics", {})
     averages: Dict[str, Tuple[np.ndarray, Tuple[str, str]]] = {}
     covs: Dict[str, Tuple[np.ndarray, Tuple[str, str]]] = {}
-
     for raw_name, display_name in ref_cfg.items():
         style = ga_baselines.get(raw_name, ("o", "black"))
         if display_name in pareto_solutions and len(pareto_solutions[display_name]) > 0:
@@ -472,7 +588,28 @@ def prepare_reference_stats(pareto_solutions: Dict[str, np.ndarray],
                 covs[display_name] = (np.zeros((2, 2)), style)
     return averages, covs
 
-# (Other existing functions remain unchanged until create_plots)
+
+def compute_nan_percentage_per_algo(metric_df: pd.DataFrame,
+                                    value_col: str,
+                                    algo_list: List[str]) -> Dict[str, Optional[float]]:
+    """
+    Returns a dict algo -> percentage of NaNs in value_col (0..100) or None if no rows for algo.
+    """
+    out: Dict[str, Optional[float]] = {}
+    if metric_df is None or metric_df.empty or value_col not in metric_df.columns:
+        for a in algo_list:
+            out[a] = None
+        return out
+    for algo in algo_list:
+        sub = metric_df[metric_df["Used_Representation"] == algo]
+        total = int(sub.shape[0])
+        if total == 0:
+            out[algo] = None
+            continue
+        n_nans = int(sub[value_col].isna().sum())
+        out[algo] = 100.0 * n_nans / float(total)
+    return out
+
 
 def create_plots():
     configure_style()
@@ -485,6 +622,9 @@ def create_plots():
     ref_heurs = config.get('reference_heuristics', {})
     all_heuristics: Dict[str, str] = {**config['heuristics'], **ref_heurs}
 
+    # Accumulator for Pareto Sacrifice undefined table
+    pareto_sacrifice_nan_stats: Dict[str, Dict[str, Optional[float]]] = {}
+
     for problem in config['datasets']:
         counter = 0
         first = True
@@ -495,7 +635,7 @@ def create_plots():
         res_var = None
         tuning_info[problem] = {}
 
-        # Load runs for all heuristics (MOO + reference)
+        # Load runs for all heuristics (MOO and reference)
         for heuristic, renamed_heuristic in all_heuristics.items():
             train_pareto_fronts[renamed_heuristic] = []
             train_pareto_solutions[renamed_heuristic] = []
@@ -558,7 +698,8 @@ def create_plots():
                     n_cols, n_rows, dataset_title, final_output_dir, dataset_key, plot_type="test")
         plot_hexbin(moo_heuristics, train_pareto_solutions, train_ref_averages, train_ref_std,
                     n_cols, n_rows, dataset_title, final_output_dir, dataset_key, plot_type="train")
-        plot_kde(moo_heuristics, test_pareto_solutions, n_cols, n_rows, dataset_title, final_output_dir, dataset_key)
+        plot_mean_shift_arrows(moo_heuristics, train_pareto_solutions, test_pareto_solutions, n_cols, n_rows,
+                               dataset_title, final_output_dir, dataset_key,n_bins=25)
         plot_hist(moo_heuristics, train_pareto_fronts, n_cols, n_rows, dataset_title, final_output_dir, dataset_key)
         plot_iterations_hv(res_var, moo_heuristics, final_output_dir, dataset_key, dataset_title)
 
@@ -566,13 +707,35 @@ def create_plots():
 
         # Metrics (filtered to only MOO heuristics in plots)
         spread_df = compute_metric_dataframe(train_pareto_fronts, metric_spread, "Spread")
-        plot_swarm_violin_metric(spread_df, config, problem, final_output_dir, "Spread", allowed_algos=moo_heuristics)
+        plot_violin_metric(spread_df, config, problem, final_output_dir, "Spread", allowed_algos=moo_heuristics)
 
         hv_df = compute_metric_dataframe(test_pareto_fronts, metric_hypervolume, "Test Hypervolume",
                                          reference_point=np.array([1.0, 1.0]))
-        plot_swarm_violin_metric(hv_df, config, problem, final_output_dir, "Test Hypervolume",
+        plot_violin_metric(hv_df, config, problem, final_output_dir, "Test Hypervolume",
                                  allowed_algos=moo_heuristics)
-    generate_latex_tables(tuning_info, config, final_output_dir)
+
+        if len(config["reference_heuristics"]) > 0:
+            reference_heuristic = config["reference_heuristics"][list(config["reference_heuristics"].keys())[0]]
+            ga_moo_distance_df = compute_ga_comparison_dataframe(test_pareto_fronts, reference_heuristic)
+
+
+            plot_violin_metric(ga_moo_distance_df, config, problem, final_output_dir,
+                                     f"$f_1$ Pareto sacrifice to {reference_heuristic}",
+                                     allowed_algos=moo_heuristics)
+
+            # ---- Collect NaN percentage for Pareto Sacrifice undefined table ----
+            sacrifice_col = f"$f_1$ Pareto sacrifice to {reference_heuristic}"
+            per_algo_nan = compute_nan_percentage_per_algo(
+                ga_moo_distance_df[ga_moo_distance_df["Used_Representation"].isin(moo_heuristics)],
+                sacrifice_col,
+                moo_heuristics
+            )
+            pareto_sacrifice_nan_stats[problem] = per_algo_nan
+
+    # After all datasets processed: emit LaTeX table
+    if len(pareto_sacrifice_nan_stats) > 0:
+        generate_pareto_sacrifice_undefined_table(pareto_sacrifice_nan_stats, config, moo_heuristics, final_output_dir)
+    generate_tuning_tables(tuning_info, config, final_output_dir)
 
 if __name__ == '__main__':
     create_plots()
