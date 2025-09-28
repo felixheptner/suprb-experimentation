@@ -19,8 +19,8 @@ complexity = "metrics.elitist_complexity"
 hypervolume = "metrics.hypervolume"
 spread = "metrics.spread"
 
-ga_baselines = {"Baseline c:ga32 j:735284": ("x", "red"),
-                "Baseline c:ga64 j:735289": ("+", "green"),
+ga_baselines = {"Baseline c:ga32": ("x", "red"),
+                "Baseline c:ga64": ("+", "green"),
                 }
 
 # Mapping raw parameter keys to nicer LaTeX display names
@@ -30,8 +30,8 @@ PARAM_NAME_MAP = {
     "solution_composition__crossover": "\\acs{SC} Crossover",
     "solution_composition__crossover__n": "\\acs{SC} $n_{cross}$",
     "solution_composition__mutation__mutation_rate": "\\acs{SC} $\\sigma_{mut}$",
-    "solution_composition__sampler__a": "Sampler $\\alpha$",
-    "solution_composition__sampler__b": "Sampler $\\beta$",
+    "solution_composition__sampler__a": "$a$",
+    "solution_composition__sampler__b": "$b$",
     "solution_composition__algorithm_1__crossover": "\\acs{GA} Crossover",
     "solution_composition__algorithm_1__crossover__n": "\\acs{GA} $n_{cross}$",
     "solution_composition__algorithm_1__mutation_rate": "\\acs{GA} $\\sigma_{mut}$",
@@ -39,7 +39,7 @@ PARAM_NAME_MAP = {
     "solution_composition__algorithm_2__crossover": "\\acs{MOO} Crossover",
     "solution_composition__algorithm_2__crossover__n": "\\acs{MOO} $n_{cross}$",
     "solution_composition__algorithm_2__mutation_rate": "\\acs{MOO} $\\sigma_{mut}$",
-
+    "solution_composition__algorithm_2__selection__k": "\\acs{MOO} $k_{sel}$",
 }
 
 
