@@ -51,7 +51,7 @@ def try_log_dict(d: dict, name: str):
 
 
 def log_experiment(experiment: Experiment):
-    _log_experiment(experiment, parent_name='', depth=0)
+    _log_experiment(experiment, parent_name="", depth=0)
 
 
 def _log_experiment(experiment: Experiment, parent_name: str, depth: int) -> dict:
@@ -63,7 +63,7 @@ def _log_experiment(experiment: Experiment, parent_name: str, depth: int) -> dic
             mlflow.set_tag("root", True)
 
         # Log tuning results
-        if hasattr(experiment, 'tuned_params_'):
+        if hasattr(experiment, "tuned_params_"):
             log_tuning(experiment)
 
         if experiment.experiments:
@@ -80,20 +80,25 @@ def _log_experiment(experiment: Experiment, parent_name: str, depth: int) -> dic
 
         else:
             # Check if experiment has evaluations
-            if hasattr(experiment, 'results_') and hasattr(experiment, 'estimators_'):
+            if hasattr(experiment, "results_") and hasattr(experiment, "estimators_"):
                 # Log cv folds
-                for i, (estimator, result) in enumerate(zip(experiment.estimators_, _expand_dict(experiment.results_)),
-                                                        1):
-                    with mlflow.start_run(run_name=f"{run_name}.fold-{i}/{len(experiment.estimators_)}",
-                                          nested=True) as cv_run:
+                for i, (estimator, result) in enumerate(
+                    zip(experiment.estimators_, _expand_dict(experiment.results_)), 1
+                ):
+                    with mlflow.start_run(
+                        run_name=f"{run_name}.fold-{i}/{len(experiment.estimators_)}", nested=True
+                    ) as cv_run:
                         log_run(estimator)
                         log_run_result(result)
 
-                        mlflow.set_tag('fold', True)
+                        mlflow.set_tag("fold", True)
 
                 # Log cv average
                 with mlflow.start_run(run_name=f"{run_name}.averaged_cv", nested=True) as average_run:
-                    average_results = {key: np.mean(value) if not isinstance(value, list) else 0 for key, value in experiment.results_.items()}
+                    average_results = {
+                        key: np.mean(value) if not isinstance(value, list) else 0
+                        for key, value in experiment.results_.items()
+                    }
                     log_run_result(average_results)
             else:
                 average_results = None
@@ -118,7 +123,7 @@ def log_tuning(experiment: Experiment):
 
     history = _expand_list(tuning_result.params_history)
 
-    try_log_dict(history, 'param_history.json')
+    try_log_dict(history, "param_history.json")
 
     # Try to log floaty params as metrics. `mlflow.log_metric` only accepts float values.
     for step, params in enumerate(tuning_result.params_history):
@@ -138,7 +143,7 @@ def log_tuning(experiment: Experiment):
 
 def log_run(estimator: BaseEstimator):
     # Log model parameters
-    try_log_dict(estimator.get_params(), 'params.json')
+    try_log_dict(estimator.get_params(), "params.json")
 
     logger = _get_default_logger(estimator)
     if logger is not None:
@@ -149,6 +154,7 @@ def log_run(estimator: BaseEstimator):
 
         if isinstance(logger, MOLogger):
             try_log_dict(logger.pareto_fronts_, "pareto_fronts.json")
+
 
 def log_run_result(result: dict):
     if "test_pf_fitness" in result:

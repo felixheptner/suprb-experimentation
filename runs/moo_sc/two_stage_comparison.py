@@ -30,25 +30,27 @@ from suprb.optimizer.solution.sampler import BetaSolutionSampler, DiversitySolut
 
 random_state = 42
 
-opt_dict = {"nsga2": nsga2.NonDominatedSortingGeneticAlgorithm2,
-            "nsga3": nsga3.NonDominatedSortingGeneticAlgorithm3,
-            "spea2": spea2.StrengthParetoEvolutionaryAlgorithm2}
+opt_dict = {
+    "nsga2": nsga2.NonDominatedSortingGeneticAlgorithm2,
+    "nsga3": nsga3.NonDominatedSortingGeneticAlgorithm3,
+    "spea2": spea2.StrengthParetoEvolutionaryAlgorithm2,
+}
 
 
 def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
     method_name = f"load_{name}"
     from problems import datasets
+
     if hasattr(datasets, method_name):
         return getattr(datasets, method_name)(**kwargs)
 
 
 @click.command()
-@click.option('-p', '--problem', type=click.STRING, default='airfoil_self_noise')
-@click.option('-j', '--job_id', type=click.STRING, default='NA')
-@click.option('-o', '--optimizer', type=click.STRING, default='nsga2')
-@click.option('-c', '--config', type=click.STRING, default='ga-moo')
-@click.option('-e', '--early-stopping', type=click.BOOL, default=True)
-
+@click.option("-p", "--problem", type=click.STRING, default="airfoil_self_noise")
+@click.option("-j", "--job_id", type=click.STRING, default="NA")
+@click.option("-o", "--optimizer", type=click.STRING, default="nsga2")
+@click.option("-c", "--config", type=click.STRING, default="ga-moo")
+@click.option("-e", "--early-stopping", type=click.BOOL, default=True)
 def run(problem: str, job_id: str, optimizer: str, config: str, early_stopping: bool):
     print(f"Problem is {problem}, with job id {job_id} and optimizer {optimizer}")
 
@@ -63,36 +65,52 @@ def run(problem: str, job_id: str, optimizer: str, config: str, early_stopping: 
     config_dict = {
         "ga-moo": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=early_stopping_delta, early_stopping_patience=early_stopping_patience),
+            algorithm_2=opt_dict[optimizer](
+                n_iter=sc_iter,
+                early_stopping_delta=early_stopping_delta,
+                early_stopping_patience=early_stopping_patience,
+            ),
             switch_iteration=32,
         ),
         "ga-moo_cold_staging": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=early_stopping_delta, early_stopping_patience=early_stopping_patience),
+            algorithm_2=opt_dict[optimizer](
+                n_iter=sc_iter,
+                early_stopping_delta=early_stopping_delta,
+                early_stopping_patience=early_stopping_patience,
+            ),
             switch_iteration=32,
             warm_start=False,
         ),
         "ga_without_tuning-moo": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=early_stopping_delta, early_stopping_patience=early_stopping_patience),
+            algorithm_2=opt_dict[optimizer](
+                n_iter=sc_iter,
+                early_stopping_delta=early_stopping_delta,
+                early_stopping_patience=early_stopping_patience,
+            ),
             switch_iteration=32,
         ),
         "ga_without_tuning-moo_cold_staging": ts.TwoStageSolutionComposition(
             algorithm_1=ga.GeneticAlgorithm(),
-            algorithm_2=opt_dict[optimizer](n_iter=sc_iter, early_stopping_delta=early_stopping_delta, early_stopping_patience=early_stopping_patience),
+            algorithm_2=opt_dict[optimizer](
+                n_iter=sc_iter,
+                early_stopping_delta=early_stopping_delta,
+                early_stopping_patience=early_stopping_patience,
+            ),
             switch_iteration=32,
             warm_start=False,
-        )
+        ),
     }
 
     estimator = SupRB(
         rule_discovery=es.ES1xLambda(
-            operator='&',
+            operator="&",
             n_iter=1000,
             delay=30,
-            init=rule.initialization.MeanInit(fitness=rule.fitness.VolumeWu(),
-                                              model=Ridge(alpha=0.01,
-                                                          random_state=random_state)),
+            init=rule.initialization.MeanInit(
+                fitness=rule.fitness.VolumeWu(), model=Ridge(alpha=0.01, random_state=random_state)
+            ),
             mutation=mutation.HalfnormIncrease(),
             origin_generation=origin.SquaredError(),
         ),
@@ -100,9 +118,8 @@ def run(problem: str, job_id: str, optimizer: str, config: str, early_stopping: 
         n_iter=32,
         n_rules=4,
         verbose=10,
-        logger=CombinedLogger(
-            [('stdout', StdoutLogger()), ('default', MOLogger())]),
-        random_state=random_state
+        logger=CombinedLogger([("stdout", StdoutLogger()), ("default", MOLogger())]),
+        random_state=random_state,
     )
 
     tuning_params = dict(
@@ -112,9 +129,9 @@ def run(problem: str, job_id: str, optimizer: str, config: str, early_stopping: 
         n_jobs_cv=4,
         n_jobs=4,
         n_calls=1000,
-        timeout=60*60*24*3 if not sys.gettrace() else 60,
-        scoring='test_hypervolume',
-        verbose=10
+        timeout=60 * 60 * 24 * 3 if not sys.gettrace() else 60,
+        scoring="test_hypervolume",
+        verbose=10,
     )
 
     @param_space()
@@ -122,40 +139,54 @@ def run(problem: str, job_id: str, optimizer: str, config: str, early_stopping: 
         # ES
         sigma_space = [0, np.sqrt(X.shape[1])]
 
-        params.rule_discovery__mutation__sigma = trial.suggest_float('rule_discovery__mutation__sigma', *sigma_space)
+        params.rule_discovery__mutation__sigma = trial.suggest_float("rule_discovery__mutation__sigma", *sigma_space)
         params.rule_discovery__init__fitness__alpha = trial.suggest_float(
-            'rule_discovery__init__fitness__alpha', 0.01, 0.2)
+            "rule_discovery__init__fitness__alpha", 0.01, 0.2
+        )
 
         ############ Solution Composition ##############
         ############ GA First Stage ##############
         if config != "ga_without_tuning-moo":
-            params.solution_composition__algorithm_1__selection__k = trial.suggest_int('solution_composition__selection__k', 3, 10)
+            params.solution_composition__algorithm_1__selection__k = trial.suggest_int(
+                "solution_composition__selection__k", 3, 10
+            )
 
             params.solution_composition__algorithm_1__crossover = trial.suggest_categorical(
-                'solution_composition__algorithm_1__crossover', ['NPoint', 'Uniform'])
-            params.solution_composition__algorithm_1__crossover = getattr(ga.crossover, params.solution_composition__algorithm_1__crossover)()
+                "solution_composition__algorithm_1__crossover", ["NPoint", "Uniform"]
+            )
+            params.solution_composition__algorithm_1__crossover = getattr(
+                ga.crossover, params.solution_composition__algorithm_1__crossover
+            )()
 
             if isinstance(params.solution_composition__algorithm_1__crossover, ga.crossover.NPoint):
-                params.solution_composition__algorithm_1__crossover__n = trial.suggest_int('solution_composition__crossover__n', 1, 10)
+                params.solution_composition__algorithm_1__crossover__n = trial.suggest_int(
+                    "solution_composition__crossover__n", 1, 10
+                )
 
             params.solution_composition__algorithm_1__mutation_rate = trial.suggest_float(
-                'solution_composition__algorithm_1__mutation_rate', 0, 0.1)
+                "solution_composition__algorithm_1__mutation_rate", 0, 0.1
+            )
 
         ############## NSGA3 Second Stage ##############
         params.solution_composition__algorithm_2__crossover = trial.suggest_categorical(
-            'solution_composition__algorithm_2__crossover', ['NPoint', 'Uniform'])
-        params.solution_composition__algorithm_2__crossover = getattr(nsga3.crossover, params.solution_composition__algorithm_2__crossover)()
+            "solution_composition__algorithm_2__crossover", ["NPoint", "Uniform"]
+        )
+        params.solution_composition__algorithm_2__crossover = getattr(
+            nsga3.crossover, params.solution_composition__algorithm_2__crossover
+        )()
 
         if isinstance(params.solution_composition__algorithm_2__crossover, nsga3.crossover.NPoint):
-            params.solution_composition__algorithm_2__crossover__n = trial.suggest_int('solution_composition__algorithm_2__crossover__n', 1, 10)
+            params.solution_composition__algorithm_2__crossover__n = trial.suggest_int(
+                "solution_composition__algorithm_2__crossover__n", 1, 10
+            )
 
         params.solution_composition__algorithm_2__mutation_rate = trial.suggest_float(
-            'solution_composition__algorithm_2__mutation_rate', 0, 0.1)
+            "solution_composition__algorithm_2__mutation_rate", 0, 0.1
+        )
 
-
-    experiment_name = (f'TSComp {optimizer} c:{config} e:{early_stopping} j:{job_id} p:{problem}')
+    experiment_name = f"TSComp {optimizer} c:{config} e:{early_stopping} j:{job_id} p:{problem}"
     print(experiment_name)
-    experiment = Experiment(name=experiment_name,  verbose=10)
+    experiment = Experiment(name=experiment_name, verbose=10)
 
     tuner = OptunaTuner(X_train=X, y_train=y, **tuning_params)
     experiment.with_tuning(suprb_ES_MOO_space, tuner=tuner)
@@ -163,15 +194,13 @@ def run(problem: str, job_id: str, optimizer: str, config: str, early_stopping: 
     random_states = np.random.SeedSequence(random_state).generate_state(8)
     experiment.with_random_states(random_states, n_jobs=8)
 
-    evaluation = MOOCrossValidate(
-        estimator=estimator, X=X, y=y, random_state=random_state, verbose=10)
+    evaluation = MOOCrossValidate(estimator=estimator, X=X, y=y, random_state=random_state, verbose=10)
 
-    experiment.perform(evaluation, cv=ShuffleSplit(
-        n_splits=8, test_size=0.25, random_state=random_state), n_jobs=8)
+    experiment.perform(evaluation, cv=ShuffleSplit(n_splits=8, test_size=0.25, random_state=random_state), n_jobs=8)
 
     mlflow.set_experiment(experiment_name)
     log_experiment(experiment)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

@@ -13,6 +13,7 @@ from sklearn.model_selection import cross_validate, KFold
 from suprb.logging.metrics import hypervolume
 from suprb.solution.fitness import c_norm, pseudo_accuracy
 
+
 def _moo_hv_pf_from_scores(scores: dict, X: np.ndarray, y: np.ndarray) -> dict:
     """
     Add Pareto front as (c_norm, PACC) and hypervolume to the scores.
@@ -34,15 +35,12 @@ def _moo_hv_pf_from_scores(scores: dict, X: np.ndarray, y: np.ndarray) -> dict:
         for solution in pf:
             solution.fit(test_X, test_y, cache=False)
 
-
         n = pf[0].fitness.max_genome_length_
         if hasattr(pf[0].fitness, "hv_reference"):
             reference = pf[0].fitness.hv_reference
         else:
             reference = np.array([1.0, 1.0])
-        pf = [
-            [1 - c_norm(solution.complexity_, n), 1 - pseudo_accuracy(solution.error_)] for solution in pf
-        ]
+        pf = [[1 - c_norm(solution.complexity_, n), 1 - pseudo_accuracy(solution.error_)] for solution in pf]
 
         if isinstance(pf[0], list):
             pf = sorted(pf, key=lambda x: x[0], reverse=True)
@@ -53,6 +51,7 @@ def _moo_hv_pf_from_scores(scores: dict, X: np.ndarray, y: np.ndarray) -> dict:
     scores["test_pf_fitness"] = pf_test_fitnesses
     scores["test_hypervolume"] = np.array(test_hvs)
     return scores
+
 
 def _soo_fitness_from_scores(scores: dict, X: np.ndarray, y: np.ndarray) -> dict:
     """
@@ -72,9 +71,9 @@ def _soo_fitness_from_scores(scores: dict, X: np.ndarray, y: np.ndarray) -> dict
         elitist.fit(test_X, test_y, cache=False)
         elitist_fitnesses.append(elitist.fitness_)
 
-
     scores["test_elitist_fitness"] = np.array(elitist_fitnesses)
     return scores
+
 
 def check_scoring(scoring):
     """Always use R^2 and MSE for evaluation."""
@@ -114,22 +113,15 @@ class BaseCrossValidate(Evaluation, metaclass=ABCMeta):
     results_: dict
 
     def cross_validate(self, X: np.ndarray, y: np.ndarray, params: dict, **kwargs):
-        scoring = check_scoring(kwargs.pop('scoring', None))
-        cv = check_cv(kwargs.pop('cv', None), random_state=self.random_state)
+        scoring = check_scoring(kwargs.pop("scoring", None))
+        cv = check_cv(kwargs.pop("cv", None), random_state=self.random_state)
 
         estimator = clone(self.estimator)
         estimator.set_params(**params)
 
         # Do cross-validation
         scores = cross_validate(
-            estimator=estimator,
-            X=X,
-            y=y,
-            scoring=scoring,
-            cv=cv,
-            return_estimator=True,
-            verbose=self.verbose,
-            **kwargs
+            estimator=estimator, X=X, y=y, scoring=scoring, cv=cv, return_estimator=True, verbose=self.verbose, **kwargs
         )
 
         return scores
@@ -139,14 +131,14 @@ class CrossValidateTest(BaseCrossValidate):
     """Evaluate the estimator using cross validation and an extra test set."""
 
     def __init__(
-            self,
-            estimator: BaseEstimator,
-            X_train: np.ndarray,
-            y_train: np.ndarray,
-            X_test: np.ndarray,
-            y_test: np.ndarray,
-            random_state: int = None,
-            verbose: int = 0,
+        self,
+        estimator: BaseEstimator,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        X_test: np.ndarray,
+        y_test: np.ndarray,
+        random_state: int = None,
+        verbose: int = 0,
     ):
         super().__init__(estimator=estimator, random_state=random_state, verbose=verbose)
         self.X_train = X_train
@@ -159,17 +151,18 @@ class CrossValidateTest(BaseCrossValidate):
         scores = self.cross_validate(self.X_train, self.y_train, **kwargs)
 
         # Save estimators externally
-        estimators = scores.pop('estimator')
+        estimators = scores.pop("estimator")
 
         # Rename test_scores to val_scores, because we have an additional test set
         new_scores = {}
         for key, value in scores.items():
-            if key.startswith('test_'):
-                scoring = key.removeprefix('test_')
-                new_scores['val_' + scoring] = scores[key]
+            if key.startswith("test_"):
+                scoring = key.removeprefix("test_")
+                new_scores["val_" + scoring] = scores[key]
                 scorer = get_scorer(scoring)
-                new_scores['test_' + scoring] = np.array(
-                    [scorer(estimator, self.X_test, self.y_test) for estimator in estimators])
+                new_scores["test_" + scoring] = np.array(
+                    [scorer(estimator, self.X_test, self.y_test) for estimator in estimators]
+                )
             else:
                 new_scores[key] = value
 
@@ -181,13 +174,13 @@ class CrossValidate(BaseCrossValidate):
     """Evaluate the estimator using cross validation."""
 
     def __init__(
-            self,
-            estimator: BaseEstimator,
-            X: np.ndarray,
-            y: np.ndarray,
-            random_state: int = None,
-            verbose: int = 0,
-            y_scaler=None,
+        self,
+        estimator: BaseEstimator,
+        X: np.ndarray,
+        y: np.ndarray,
+        random_state: int = None,
+        verbose: int = 0,
+        y_scaler=None,
     ):
         super().__init__(estimator=estimator, random_state=random_state, verbose=verbose)
         self.X = X
@@ -198,7 +191,7 @@ class CrossValidate(BaseCrossValidate):
         scores = self.cross_validate(self.X, self.y, **kwargs)
 
         # Save estimators externally
-        estimators = scores.pop('estimator')
+        estimators = scores.pop("estimator")
 
         self.estimators_, self.results_ = estimators, scores
 
@@ -207,27 +200,26 @@ class CrossValidate(BaseCrossValidate):
             self.results_["y_scaler_std"] = np.sqrt(self.y_scaler.var_)
 
             self.results_["test_neg_mean_squared_error_unscaled"] = (
-                self.results_["test_neg_mean_squared_error"]
-                * self.results_["y_scaler_var"]
+                self.results_["test_neg_mean_squared_error"] * self.results_["y_scaler_var"]
             )
             self.results_["test_neg_mean_absolute_error"] = (
-                self.results_["test_neg_mean_absolute_error"]
-                * self.results_["y_scaler_std"]
+                self.results_["test_neg_mean_absolute_error"] * self.results_["y_scaler_std"]
             )
 
         return self.estimators_, self.results_
+
 
 class MOOCrossValidate(BaseCrossValidate):
     """Evaluate the estimator using cross validation."""
 
     def __init__(
-            self,
-            estimator: BaseEstimator,
-            X: np.ndarray,
-            y: np.ndarray,
-            random_state: int = None,
-            verbose: int = 0,
-            y_scaler=None,
+        self,
+        estimator: BaseEstimator,
+        X: np.ndarray,
+        y: np.ndarray,
+        random_state: int = None,
+        verbose: int = 0,
+        y_scaler=None,
     ):
         super().__init__(estimator=estimator, random_state=random_state, verbose=verbose)
         self.X = X
@@ -244,7 +236,7 @@ class MOOCrossValidate(BaseCrossValidate):
         scores.pop("indices")
 
         # Save estimators externally
-        estimators = scores.pop('estimator')
+        estimators = scores.pop("estimator")
 
         self.estimators_, self.results_ = estimators, scores
 
@@ -253,12 +245,10 @@ class MOOCrossValidate(BaseCrossValidate):
             self.results_["y_scaler_std"] = np.sqrt(self.y_scaler.var_)
 
             self.results_["test_neg_mean_squared_error_unscaled"] = (
-                self.results_["test_neg_mean_squared_error"]
-                * self.results_["y_scaler_var"]
+                self.results_["test_neg_mean_squared_error"] * self.results_["y_scaler_var"]
             )
             self.results_["test_neg_mean_absolute_error"] = (
-                self.results_["test_neg_mean_absolute_error"]
-                * self.results_["y_scaler_std"]
+                self.results_["test_neg_mean_absolute_error"] * self.results_["y_scaler_std"]
             )
 
         return self.estimators_, self.results_

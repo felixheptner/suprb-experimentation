@@ -5,7 +5,7 @@ from suprb.logging.multi_objective import MOLogger
 from typing import Optional
 
 
-__all__ = ['fitness', 'train_hypervolume']
+__all__ = ["fitness", "train_hypervolume"]
 
 
 def _get_default_logger(estimator: BaseEstimator) -> Optional[MOLogger]:
@@ -18,8 +18,10 @@ def _get_default_logger(estimator: BaseEstimator) -> Optional[MOLogger]:
                 if isinstance(sublogger, MOLogger):
                     return sublogger
 
+
 def fitness(model: SupRB):
     return model.elitist_.fitness_
+
 
 def train_hypervolume(model: SupRB):
     # Todo: This cant be the right way to do this

@@ -19,9 +19,10 @@ complexity = "metrics.elitist_complexity"
 hypervolume = "metrics.hypervolume"
 spread = "metrics.spread"
 
-ga_baselines = {"Baseline c:ga32": ("x", "red"),
-                "Baseline c:ga64": ("+", "green"),
-                }
+ga_baselines = {
+    "Baseline c:ga32": ("x", "red"),
+    "Baseline c:ga64": ("+", "green"),
+}
 
 # Mapping raw parameter keys to nicer LaTeX display names
 PARAM_NAME_MAP = {
@@ -44,7 +45,8 @@ PARAM_NAME_MAP = {
 
 
 def _esc_tex(s: str) -> str:
-    return str(s).replace('_', r'\_')
+    return str(s).replace("_", r"\_")
+
 
 def f_1_pareto_sacrifice(moo_front: np.ndarray, ga_front: np.ndarray) -> float:
     """
@@ -70,7 +72,7 @@ def generate_pareto_sacrifice_undefined_table(
     per_problem_nan: Dict[str, Dict[str, Optional[float]]],
     cfg: Dict[str, Any],
     moo_algos: List[str],
-    final_output_dir: str
+    final_output_dir: str,
 ) -> None:
     """
     One LaTeX table: rows=datasets, cols=moo_algos, values=\% of NaNs in $f_1$ Pareto sacrifice
@@ -87,7 +89,7 @@ def generate_pareto_sacrifice_undefined_table(
         r"\begin{tabular}{" + col_format + r"}",
         r"\hline",
         " & ".join([_esc_tex(h) for h in header]) + r" \\",
-        r"\hline"
+        r"\hline",
     ]
 
     # Keep dataset order from cfg
@@ -107,9 +109,9 @@ def generate_pareto_sacrifice_undefined_table(
         f.write("\n".join(lines))
 
 
-def generate_tuning_tables(tuning_params: Dict[str, Dict[str, Dict]],
-                           config: Dict[str, Any],
-                           final_output_dir: str) -> None:
+def generate_tuning_tables(
+    tuning_params: Dict[str, Dict[str, Dict]], config: Dict[str, Any], final_output_dir: str
+) -> None:
     """
     Generate one LaTeX table per heuristic (renamed) showing tuned parameter values across datasets.
     Rows: datasets
@@ -149,11 +151,10 @@ def generate_tuning_tables(tuning_params: Dict[str, Dict[str, Dict]],
             r"\begin{table}[ht]",
             r"\centering",
             r"\caption{Tuned parameters for " + _esc_tex(display_name) + r"}",
-            r"\adjustbox{max width=\textwidth}{"
-            r"\begin{tabular}{" + col_format + r"}",
+            r"\adjustbox{max width=\textwidth}{" r"\begin{tabular}{" + col_format + r"}",
             r"\hline",
             " & ".join(header_cols) + r" \\",
-            r"\hline"
+            r"\hline",
         ]
 
         for problem in config["datasets"]:
@@ -177,31 +178,30 @@ def generate_tuning_tables(tuning_params: Dict[str, Dict[str, Dict]],
         with open(out_path, "w") as f:
             f.write(content)
 
+
 def configure_style() -> None:
     """
     Creating Hexbin, Kernel density estimate, and Pareto Front cardinality histogram plots.
     """
     sns.set_style("whitegrid")
-    sns.set_theme(style="whitegrid",
-                  font="Times New Roman",
-                  font_scale=1.7,
-                  rc={
-                      "lines.linewidth": 1,
-                      "pdf.fonttype": 42,
-                      "ps.fonttype": 42
-                  })
+    sns.set_theme(
+        style="whitegrid",
+        font="Times New Roman",
+        font_scale=1.7,
+        rc={"lines.linewidth": 1, "pdf.fonttype": 42, "ps.fonttype": 42},
+    )
 
-    plt.rcParams['font.family'] = 'serif'
-    plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
-    plt.rcParams['figure.dpi'] = 200
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"] + plt.rcParams["font.serif"]
+    plt.rcParams["figure.dpi"] = 200
 
 
-def load_config(path: str = 'logging_output_scripts/config.json') -> Dict[str, Any]:
+def load_config(path: str = "logging_output_scripts/config.json") -> Dict[str, Any]:
     with open(path) as f:
         return json.load(f)
 
 
-def confidence_ellipse(mean, cov, ax, n_std=1.96, color='red', **kwargs):
+def confidence_ellipse(mean, cov, ax, n_std=1.96, color="red", **kwargs):
     """
     https://de.matplotlib.net/stable/gallery/statistics/confidence_ellipse.html#the-plotting-function-itself
     http://www.econ.uiuc.edu/~roger/courses/471/lectures/L5.pdf
@@ -232,8 +232,9 @@ def confidence_ellipse(mean, cov, ax, n_std=1.96, color='red', **kwargs):
     # two-dimensional dataset.
     ell_radius_x = np.sqrt(1 + pearson)
     ell_radius_y = np.sqrt(1 - pearson)
-    ellipse = Ellipse((0, 0), width=ell_radius_x * 2, height=ell_radius_y * 2,
-                      facecolor=color, edgecolor=color, **kwargs)
+    ellipse = Ellipse(
+        (0, 0), width=ell_radius_x * 2, height=ell_radius_y * 2, facecolor=color, edgecolor=color, **kwargs
+    )
 
     # Calculating the standard deviation of x from
     # the squareroot of the variance and multiplying
@@ -241,14 +242,13 @@ def confidence_ellipse(mean, cov, ax, n_std=1.96, color='red', **kwargs):
     scale_x = np.sqrt(cov[0, 0]) * n_std
     # calculating the standard deviation of y ...
     scale_y = np.sqrt(cov[1, 1]) * n_std
-    transf = transforms.Affine2D() \
-        .rotate_deg(45) \
-        .scale(scale_x, scale_y) \
-        .translate(mean[0], mean[1])
+    transf = transforms.Affine2D().rotate_deg(45).scale(scale_x, scale_y).translate(mean[0], mean[1])
 
     ellipse.set_transform(transf + ax.transData)
     ellipse.set_edgecolor(color)
-    ellipse.set_facecolor((ellipse.get_facecolor()[0], ellipse.get_facecolor()[1], ellipse.get_facecolor()[2], 0.2))  # 20% alpha for fill
+    ellipse.set_facecolor(
+        (ellipse.get_facecolor()[0], ellipse.get_facecolor()[1], ellipse.get_facecolor()[2], 0.2)
+    )  # 20% alpha for fill
     ax.add_patch(ellipse)
     return ellipse
 
@@ -258,18 +258,21 @@ def load_fold_dataframe(heuristic: str, problem: str, cfg: Dict[str, Any]) -> Un
         return get_df(heuristic, problem)
     return get_csv_df(heuristic, problem), get_csv_root_df(heuristic, problem)
 
+
 def load_roof_dataframe(heuristic: str, problem: str, cfg: Dict[str, Any]) -> pd.DataFrame:
     if cfg["data_directory"] == "mlruns":
         return get_df(heuristic, problem)
     return get_csv_df(heuristic, problem)
 
 
-def process_artifact_paths(current_res: pd.DataFrame,
-                           renamed_heuristic: str,
-                           train_pareto_fronts: Dict[str, List[List]],
-                           train_pareto_solutions: Dict[str, List[List[float]]],
-                           test_pareto_fronts: Dict[str, List[List]],
-                           test_pareto_solutions: Dict[str, List[List[float]]]) -> None:
+def process_artifact_paths(
+    current_res: pd.DataFrame,
+    renamed_heuristic: str,
+    train_pareto_fronts: Dict[str, List[List]],
+    train_pareto_solutions: Dict[str, List[List[float]]],
+    test_pareto_fronts: Dict[str, List[List]],
+    test_pareto_solutions: Dict[str, List[List[float]]],
+) -> None:
     for path in current_res["artifact_uri"]:
         path = path.split("suprb-experimentation/")[-1]
         with open(os.path.join(path, "pareto_fronts.json")) as f:
@@ -284,10 +287,14 @@ def process_artifact_paths(current_res: pd.DataFrame,
             test_pareto_solutions[renamed_heuristic].extend(test_pf)
 
 
-def prepare_soo_stats(pareto_solutions: Dict[str, np.ndarray],
-                      cfg: Dict[str, Any]) -> Tuple[Dict[str, Tuple[np.ndarray, Tuple[str, str]]],
-                                                    Dict[str, Tuple[np.ndarray, Tuple[str, str]]]]:
-    soo_heuristics = [(cfg["heuristics"][algo], ga_baselines[algo]) for algo in cfg["heuristics"].keys() if algo in ga_baselines.keys()]
+def prepare_soo_stats(
+    pareto_solutions: Dict[str, np.ndarray], cfg: Dict[str, Any]
+) -> Tuple[Dict[str, Tuple[np.ndarray, Tuple[str, str]]], Dict[str, Tuple[np.ndarray, Tuple[str, str]]]]:
+    soo_heuristics = [
+        (cfg["heuristics"][algo], ga_baselines[algo])
+        for algo in cfg["heuristics"].keys()
+        if algo in ga_baselines.keys()
+    ]
     soo_averages: Dict[str, Tuple[np.ndarray, Tuple[str, str]]] = {}
     soo_standard_devs: Dict[str, Tuple[np.ndarray, Tuple[str, str]]] = {}
     for algo, style in soo_heuristics:
@@ -308,15 +315,18 @@ def determine_layout(n_algs: int) -> Tuple[int, int]:
     return n_cols, n_rows
 
 
-def plot_hexbin(moo_heuristics: List[str],
-                pareto_solutions: Dict[str, np.ndarray],
-                soo_averages: Dict[str, Tuple[np.ndarray, Tuple[str, str]]],
-                soo_standard_devs: Dict[str, Tuple[np.ndarray, Tuple[str, str]]],
-                n_cols: int, n_rows: int,
-                title: str,
-                final_output_dir: str,
-                dataset_key: str,
-                plot_type: str = "test") -> None:
+def plot_hexbin(
+    moo_heuristics: List[str],
+    pareto_solutions: Dict[str, np.ndarray],
+    soo_averages: Dict[str, Tuple[np.ndarray, Tuple[str, str]]],
+    soo_standard_devs: Dict[str, Tuple[np.ndarray, Tuple[str, str]]],
+    n_cols: int,
+    n_rows: int,
+    title: str,
+    final_output_dir: str,
+    dataset_key: str,
+    plot_type: str = "test",
+) -> None:
     """
     Create hexbin plot for Pareto solutions.
 
@@ -327,38 +337,53 @@ def plot_hexbin(moo_heuristics: List[str],
     plot_type: str
         String identifier to add to plot title and filename (e.g., "test", "train")
     """
-    fig_hex, axes_hex = plt.subplots(n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True,
-                                     sharey=True, constrained_layout=True, squeeze=False)
+    fig_hex, axes_hex = plt.subplots(
+        n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True, sharey=True, constrained_layout=True, squeeze=False
+    )
 
     # Add plot_type to title if it's not "test" (for backward compatibility)
     display_title = f"{title}" if plot_type == "test" else f"{title} ({plot_type.capitalize()})"
     fig_hex.suptitle(display_title)
 
     for i, algo in enumerate(moo_heuristics):
-        algo_df = pd.DataFrame({
-            "Normed Complexity": pareto_solutions[algo][:, 0],
-            "Pseudo Accuracy": pareto_solutions[algo][:, 1]
-        })
+        algo_df = pd.DataFrame(
+            {"Normed Complexity": pareto_solutions[algo][:, 0], "Pseudo Accuracy": pareto_solutions[algo][:, 1]}
+        )
         hb = axes_hex[i % n_rows, i // n_rows].hexbin(
-            algo_df['Normed Complexity'], algo_df['Pseudo Accuracy'],
-            gridsize=30, cmap='Blues' if plot_type == "test" else 'Oranges',
-            extent=(0, 1, 0, 1), mincnt=1,
+            algo_df["Normed Complexity"],
+            algo_df["Pseudo Accuracy"],
+            gridsize=30,
+            cmap="Blues" if plot_type == "test" else "Oranges",
+            extent=(0, 1, 0, 1),
+            mincnt=1,
         )
         axes_hex[i % n_rows, i // n_rows].set_title(f"{algo}")
         # Plot SOO comparison points
-        for (soo_algo, value) in soo_averages.items():
+        for soo_algo, value in soo_averages.items():
             avg, style = value
             cov = soo_standard_devs[soo_algo][0]
             axes_hex[i % n_rows, i // n_rows].plot(
-                avg[0], avg[1], marker=style[0], markersize=6,
-                markeredgewidth=1.2, color=style[1],
-                linestyle='None', label=f"{soo_algo} Mean"
+                avg[0],
+                avg[1],
+                marker=style[0],
+                markersize=6,
+                markeredgewidth=1.2,
+                color=style[1],
+                linestyle="None",
+                label=f"{soo_algo} Mean",
             )
-            confidence_ellipse(avg, cov, axes_hex[i % n_rows, i // n_rows], n_std=1.96,
-                               color=style[1], label=f"{soo_algo} 95% CI", alpha=0.2)
+            confidence_ellipse(
+                avg,
+                cov,
+                axes_hex[i % n_rows, i // n_rows],
+                n_std=1.96,
+                color=style[1],
+                label=f"{soo_algo} 95% CI",
+                alpha=0.2,
+            )
         axes_hex[i % n_rows, i // n_rows].legend(fontsize=14, loc="upper right")
         axes_hex[i % n_rows, i // n_rows].set_xlabel("$f_1$")
-        fig_hex.colorbar(hb, ax=axes_hex[i % n_rows, i // n_rows], label='Density')
+        fig_hex.colorbar(hb, ax=axes_hex[i % n_rows, i // n_rows], label="Density")
     fig_hex.supylabel("$f_2$")
 
     # Create filename based on plot_type
@@ -367,18 +392,24 @@ def plot_hexbin(moo_heuristics: List[str],
     plt.close(fig_hex)
 
 
-def plot_mean_shift_arrows(moo_heuristics: List[str],
-                           train_pareto_solutions: Dict[str, np.ndarray],
-                           test_pareto_solutions: Dict[str, np.ndarray],
-                           n_cols: int, n_rows: int,
-                           title: str, final_output_dir: str, dataset_key: str,
-                           n_bins: int = 20) -> None:
+def plot_mean_shift_arrows(
+    moo_heuristics: List[str],
+    train_pareto_solutions: Dict[str, np.ndarray],
+    test_pareto_solutions: Dict[str, np.ndarray],
+    n_cols: int,
+    n_rows: int,
+    title: str,
+    final_output_dir: str,
+    dataset_key: str,
+    n_bins: int = 20,
+) -> None:
     """
     Plot mean shift arrows of f1 between training and test per f0 bin.
     Scatter + arrows are centered at the bin midpoint.
     """
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(18, 5 * n_rows),
-                             sharex=True, sharey=True, constrained_layout=True, squeeze=False)
+    fig, axes = plt.subplots(
+        n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True, sharey=True, constrained_layout=True, squeeze=False
+    )
     fig.suptitle(f"{title} (Mean shift arrows)")
 
     for i, algo in enumerate(moo_heuristics):
@@ -407,15 +438,33 @@ def plot_mean_shift_arrows(moo_heuristics: List[str],
                 arrow_data.append((bin_center, mean_train, mean_test))
 
         for bin_center, mean_train, mean_test in arrow_data:
-            ax.arrow(bin_center, mean_train,
-                     0, mean_test - mean_train,
-                     head_width=0.01, head_length=0.01,
-                     length_includes_head=True,
-                     color="steelblue", alpha=0.8)
-        ax.scatter([d[0] for d in arrow_data], [d[1] for d in arrow_data],
-                   label="fTrain mean $f_1$", color="blue", marker="o", s=30)
-        ax.scatter([d[0] for d in arrow_data], [d[2] for d in arrow_data],
-                   label="Test mean $f_1$", color="red", marker="x", s=40)
+            ax.arrow(
+                bin_center,
+                mean_train,
+                0,
+                mean_test - mean_train,
+                head_width=0.01,
+                head_length=0.01,
+                length_includes_head=True,
+                color="steelblue",
+                alpha=0.8,
+            )
+        ax.scatter(
+            [d[0] for d in arrow_data],
+            [d[1] for d in arrow_data],
+            label="fTrain mean $f_1$",
+            color="blue",
+            marker="o",
+            s=30,
+        )
+        ax.scatter(
+            [d[0] for d in arrow_data],
+            [d[2] for d in arrow_data],
+            label="Test mean $f_1$",
+            color="red",
+            marker="x",
+            s=40,
+        )
 
         ax.set_title(f"{algo}")
         ax.set_xlim(0, 1)
@@ -429,19 +478,27 @@ def plot_mean_shift_arrows(moo_heuristics: List[str],
     plt.close(fig)
 
 
-def plot_hist(moo_heuristics: List[str],
-              train_pareto_fronts: Dict[str, List[List]],
-              n_cols: int, n_rows: int,
-              title: str, final_output_dir: str, dataset_key: str) -> None:
-    fig_hist, axes_hist = plt.subplots(n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True,
-                                       sharey=True, constrained_layout=True, squeeze=False)
+def plot_hist(
+    moo_heuristics: List[str],
+    train_pareto_fronts: Dict[str, List[List]],
+    n_cols: int,
+    n_rows: int,
+    title: str,
+    final_output_dir: str,
+    dataset_key: str,
+) -> None:
+    fig_hist, axes_hist = plt.subplots(
+        n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True, sharey=True, constrained_layout=True, squeeze=False
+    )
     fig_hist.suptitle(title)
     for i, algo in enumerate(moo_heuristics):
         pf_lengths = [len(pf) for pf in train_pareto_fronts[algo]]
         if not pf_lengths:
             continue
         max_length = max(pf_lengths)
-        axes_hist[i // n_cols, i % n_cols].hist(pf_lengths, bins=np.arange(1, max(33, max_length + 1)), align='left', rwidth=0.9)
+        axes_hist[i // n_cols, i % n_cols].hist(
+            pf_lengths, bins=np.arange(1, max(33, max_length + 1)), align="left", rwidth=0.9
+        )
         axes_hist[i // n_cols, i % n_cols].set_title(f"{algo}")
         axes_hist[i // n_cols, i % n_cols].set_xlabel(f"Cardinalities")
     fig_hist.supylabel("# of Pareto fronts")
@@ -449,11 +506,9 @@ def plot_hist(moo_heuristics: List[str],
     plt.close(fig_hist)
 
 
-def plot_iterations_hv(res_var: pd.DataFrame,
-                       moo_heuristics: List[str],
-                       final_output_dir: str,
-                       dataset_key: str,
-                       title: str) -> None:
+def plot_iterations_hv(
+    res_var: pd.DataFrame, moo_heuristics: List[str], final_output_dir: str, dataset_key: str, title: str
+) -> None:
     # Determine which heuristics have valid data for Iterations to Hypervolume
     valid_ithv_heuristics: List[str] = []
     # Ensure res_var is not None before proceeding
@@ -469,9 +524,14 @@ def plot_iterations_hv(res_var: pd.DataFrame,
     if not valid_ithv_heuristics:
         print(f"No valid data to plot Iterations to Hypervolume for problem: {dataset_key}. Skipping this plot.")
         return
-    fig_ithv, axes_ithv = plt.subplots(1, len(valid_ithv_heuristics),
-                                       figsize=(6 * len(valid_ithv_heuristics), 5),  # Adjust figsize dynamically
-                                       sharex=True, sharey=True, constrained_layout=True)
+    fig_ithv, axes_ithv = plt.subplots(
+        1,
+        len(valid_ithv_heuristics),
+        figsize=(6 * len(valid_ithv_heuristics), 5),  # Adjust figsize dynamically
+        sharex=True,
+        sharey=True,
+        constrained_layout=True,
+    )
     # Ensure axes_ithv is always an array, even if there's only one subplot
     if len(valid_ithv_heuristics) == 1:
         axes_ithv = [axes_ithv]
@@ -480,10 +540,7 @@ def plot_iterations_hv(res_var: pd.DataFrame,
         algo_df = res_var.loc[res_var["Used_Representation"] == algo]
         iters = algo_df["metrics.sc_iterations"]
         hv = algo_df["metrics.test_hypervolume"]
-        algo_df_plot = pd.DataFrame({
-            "Iterations": iters,
-            "Hypervolume": hv
-        })
+        algo_df_plot = pd.DataFrame({"Iterations": iters, "Hypervolume": hv})
         sns.scatterplot(data=algo_df_plot, x="Iterations", y="Hypervolume", ax=axes_ithv[i])
         # Fit regression line
         X = algo_df_plot["Iterations"].values.reshape(-1, 1)
@@ -491,7 +548,7 @@ def plot_iterations_hv(res_var: pd.DataFrame,
         # Check for NaNs and infs before fitting, and ensure X has enough unique points
         if not np.isnan(np.sum(X)) and not np.isinf(np.sum(X)) and len(np.unique(X)) > 1:
             reg = LinearRegression().fit(X, y)
-            axes_ithv[i].plot(X, reg.predict(X), color='red', linewidth=2)
+            axes_ithv[i].plot(X, reg.predict(X), color="red", linewidth=2)
         else:
             print(f"Skipping regression line for {algo} due to insufficient data or constant X.")
         axes_ithv[i].set_title(f"{algo}")
@@ -499,19 +556,19 @@ def plot_iterations_hv(res_var: pd.DataFrame,
     plt.close(fig_ithv)  # Close fig_ithv, not fig_kde
 
 
-def compute_metric_dataframe(pareto_fronts: Dict[str, List[List]], metric: callable, name: str, *args, **kwargs) -> pd.DataFrame:
+def compute_metric_dataframe(
+    pareto_fronts: Dict[str, List[List]], metric: callable, name: str, *args, **kwargs
+) -> pd.DataFrame:
     m_rows = []
     for algo in pareto_fronts.keys():
         for idx, front in enumerate(pareto_fronts[algo]):
             front_np = np.array(front)
             m = metric(front_np, *args, **kwargs)
-            m_rows.append({
-                "Used_Representation": algo,
-                name: m
-            })
+            m_rows.append({"Used_Representation": algo, name: m})
     return pd.DataFrame(m_rows)
 
-def compute_ga_comparison_dataframe(pareto_fronts: Dict[str, List[List]], ref_name:str):
+
+def compute_ga_comparison_dataframe(pareto_fronts: Dict[str, List[List]], ref_name: str):
     m_rows = []
     ref_fronts = pareto_fronts[ref_name]
     for algo in pareto_fronts.keys():
@@ -519,18 +576,18 @@ def compute_ga_comparison_dataframe(pareto_fronts: Dict[str, List[List]], ref_na
             front_np = np.array(front)
             ref_front_np = np.array(ref_fronts[idx])
             m = f_1_pareto_sacrifice(front_np, ref_front_np)
-            m_rows.append({
-                "Used_Representation": algo,
-                f"$f_1$ Pareto sacrifice to {ref_name}": m
-            })
+            m_rows.append({"Used_Representation": algo, f"$f_1$ Pareto sacrifice to {ref_name}": m})
     return pd.DataFrame(m_rows)
 
-def plot_violin_metric(metric_df: pd.DataFrame,
-                             cfg: Dict[str, Any],
-                             problem: str,
-                             final_output_dir: str,
-                             name: str,
-                             allowed_algos: List[str] | None = None) -> None:
+
+def plot_violin_metric(
+    metric_df: pd.DataFrame,
+    cfg: Dict[str, Any],
+    problem: str,
+    final_output_dir: str,
+    name: str,
+    allowed_algos: List[str] | None = None,
+) -> None:
     # Filter to only MOO heuristics if provided
     if allowed_algos is not None:
         metric_df = metric_df[metric_df["Used_Representation"].isin(allowed_algos)]
@@ -540,12 +597,20 @@ def plot_violin_metric(metric_df: pd.DataFrame,
     # ================== Spread Violin Plot ==================
     fig_violin, ax_violin = plt.subplots(dpi=400)
     plt.subplots_adjust(left=0.2, right=0.95, top=0.92, bottom=0.22)
-    sns.violinplot(data=metric_df, x="Used_Representation", y=name, ax=ax_violin, inner="box", palette="tab10",
-                   hue="Used_Representation", legend=False)
+    sns.violinplot(
+        data=metric_df,
+        x="Used_Representation",
+        y=name,
+        ax=ax_violin,
+        inner="box",
+        palette="tab10",
+        hue="Used_Representation",
+        legend=False,
+    )
     ax_violin.set_title(f"{cfg['datasets'][problem]}", style="italic", fontsize=14)
     ax_violin.set_ylabel(name, fontsize=18, weight="bold")
     ax_violin.set_xlabel("")
-    ax_violin.tick_params(axis='x', rotation=15)#
+    ax_violin.tick_params(axis="x", rotation=15)  #
     y_min = min(ax_violin.get_yticks())
     y_max = max(ax_violin.get_yticks())
     num_ticks = 7
@@ -556,17 +621,16 @@ def plot_violin_metric(metric_df: pd.DataFrame,
     y_tick_positions = np.round(y_tick_positions, 3)
     ax_violin.set_ylim(y_min, y_max)
     ax_violin.set_yticks(y_tick_positions)
-    ax_violin.set_yticklabels([f'{x:.3g}' for x in y_tick_positions])
-    plt.xticks(rotation=15, ha='right', fontsize=12)
+    ax_violin.set_yticklabels([f"{x:.3g}" for x in y_tick_positions])
+    plt.xticks(rotation=15, ha="right", fontsize=12)
     plt.tight_layout()
     fig_violin.savefig(f"{final_output_dir}/{datasets_map[problem]}_violin_{name}.png")
     plt.close(fig_violin)
 
 
-def prepare_reference_stats(pareto_solutions: Dict[str, np.ndarray],
-                            cfg: Dict[str, Any]) -> Tuple[
-                                Dict[str, Tuple[np.ndarray, Tuple[str, str]]],
-                                Dict[str, Tuple[np.ndarray, Tuple[str, str]]]]:
+def prepare_reference_stats(
+    pareto_solutions: Dict[str, np.ndarray], cfg: Dict[str, Any]
+) -> Tuple[Dict[str, Tuple[np.ndarray, Tuple[str, str]]], Dict[str, Tuple[np.ndarray, Tuple[str, str]]]]:
     """
     Prepares mean points and covariance (for confidence ellipses) of reference (SOO) heuristics.
     Extracts soo_pareto_fronts
@@ -589,9 +653,9 @@ def prepare_reference_stats(pareto_solutions: Dict[str, np.ndarray],
     return averages, covs
 
 
-def compute_nan_percentage_per_algo(metric_df: pd.DataFrame,
-                                    value_col: str,
-                                    algo_list: List[str]) -> Dict[str, Optional[float]]:
+def compute_nan_percentage_per_algo(
+    metric_df: pd.DataFrame, value_col: str, algo_list: List[str]
+) -> Dict[str, Optional[float]]:
     """
     Returns a dict algo -> percentage of NaNs in value_col (0..100) or None if no rows for algo.
     """
@@ -619,13 +683,13 @@ def create_plots():
     tuning_info: Dict[str, Dict[str, Dict]] = {}
 
     # Merge MOO and reference heuristics for data loading
-    ref_heurs = config.get('reference_heuristics', {})
-    all_heuristics: Dict[str, str] = {**config['heuristics'], **ref_heurs}
+    ref_heurs = config.get("reference_heuristics", {})
+    all_heuristics: Dict[str, str] = {**config["heuristics"], **ref_heurs}
 
     # Accumulator for Pareto Sacrifice undefined table
     pareto_sacrifice_nan_stats: Dict[str, Dict[str, Optional[float]]] = {}
 
-    for problem in config['datasets']:
+    for problem in config["datasets"]:
         counter = 0
         first = True
         train_pareto_fronts: Dict[str, List[List]] = {}
@@ -645,7 +709,7 @@ def create_plots():
             fold_df, root_df = load_fold_dataframe(heuristic, problem, config)
             if root_df is not None and not root_df.empty:
                 string_dict = root_df["params.tuned_params"].iloc[0]
-                string_dict = re.sub(r'([A-Za-z_]\w*)\([^)]*\)', r"'\1'", string_dict)
+                string_dict = re.sub(r"([A-Za-z_]\w*)\([^)]*\)", r"'\1'", string_dict)
                 try:
                     tuning_info[problem][heuristic] = ast.literal_eval(string_dict)
                 except Exception:
@@ -668,9 +732,14 @@ def create_plots():
                     res_var = current_res
                 else:
                     res_var = pd.concat([res_var, current_res])
-                process_artifact_paths(current_res, renamed_heuristic,
-                                       train_pareto_fronts, train_pareto_solutions,
-                                       test_pareto_fronts, test_pareto_solutions)
+                process_artifact_paths(
+                    current_res,
+                    renamed_heuristic,
+                    train_pareto_fronts,
+                    train_pareto_solutions,
+                    test_pareto_fronts,
+                    test_pareto_solutions,
+                )
 
         if counter == 0:
             print(f"No data for problem {problem}, skipping.")
@@ -682,7 +751,7 @@ def create_plots():
             test_pareto_solutions[key] = np.array(test_pareto_solutions[key])
 
         # MOO heuristics now are exactly the display names of config['heuristics']
-        moo_heuristics = list(config['heuristics'].values())
+        moo_heuristics = list(config["heuristics"].values())
 
         # Prepare reference (SOO) overlays
         test_ref_averages, test_ref_std = prepare_reference_stats(test_pareto_solutions, config)
@@ -691,44 +760,77 @@ def create_plots():
         n_algs = len(moo_heuristics)
         n_cols, n_rows = determine_layout(n_algs)
         dataset_key = datasets_map[problem]
-        dataset_title = config['datasets'][problem]
+        dataset_title = config["datasets"][problem]
 
         # Plots
-        plot_hexbin(moo_heuristics, test_pareto_solutions, test_ref_averages, test_ref_std,
-                    n_cols, n_rows, dataset_title, final_output_dir, dataset_key, plot_type="test")
-        plot_hexbin(moo_heuristics, train_pareto_solutions, train_ref_averages, train_ref_std,
-                    n_cols, n_rows, dataset_title, final_output_dir, dataset_key, plot_type="train")
-        plot_mean_shift_arrows(moo_heuristics, train_pareto_solutions, test_pareto_solutions, n_cols, n_rows,
-                               dataset_title, final_output_dir, dataset_key,n_bins=25)
+        plot_hexbin(
+            moo_heuristics,
+            test_pareto_solutions,
+            test_ref_averages,
+            test_ref_std,
+            n_cols,
+            n_rows,
+            dataset_title,
+            final_output_dir,
+            dataset_key,
+            plot_type="test",
+        )
+        plot_hexbin(
+            moo_heuristics,
+            train_pareto_solutions,
+            train_ref_averages,
+            train_ref_std,
+            n_cols,
+            n_rows,
+            dataset_title,
+            final_output_dir,
+            dataset_key,
+            plot_type="train",
+        )
+        plot_mean_shift_arrows(
+            moo_heuristics,
+            train_pareto_solutions,
+            test_pareto_solutions,
+            n_cols,
+            n_rows,
+            dataset_title,
+            final_output_dir,
+            dataset_key,
+            n_bins=25,
+        )
         plot_hist(moo_heuristics, train_pareto_fronts, n_cols, n_rows, dataset_title, final_output_dir, dataset_key)
         plot_iterations_hv(res_var, moo_heuristics, final_output_dir, dataset_key, dataset_title)
 
-        moo_heuristics = list(config['heuristics'].values())
+        moo_heuristics = list(config["heuristics"].values())
 
         # Metrics (filtered to only MOO heuristics in plots)
         spread_df = compute_metric_dataframe(train_pareto_fronts, metric_spread, "Spread")
         plot_violin_metric(spread_df, config, problem, final_output_dir, "Spread", allowed_algos=moo_heuristics)
 
-        hv_df = compute_metric_dataframe(test_pareto_fronts, metric_hypervolume, "Test Hypervolume",
-                                         reference_point=np.array([1.0, 1.0]))
-        plot_violin_metric(hv_df, config, problem, final_output_dir, "Test Hypervolume",
-                                 allowed_algos=moo_heuristics)
+        hv_df = compute_metric_dataframe(
+            test_pareto_fronts, metric_hypervolume, "Test Hypervolume", reference_point=np.array([1.0, 1.0])
+        )
+        plot_violin_metric(hv_df, config, problem, final_output_dir, "Test Hypervolume", allowed_algos=moo_heuristics)
 
         if len(config["reference_heuristics"]) > 0:
             reference_heuristic = config["reference_heuristics"][list(config["reference_heuristics"].keys())[0]]
             ga_moo_distance_df = compute_ga_comparison_dataframe(test_pareto_fronts, reference_heuristic)
 
-
-            plot_violin_metric(ga_moo_distance_df, config, problem, final_output_dir,
-                                     f"$f_1$ Pareto sacrifice to {reference_heuristic}",
-                                     allowed_algos=moo_heuristics)
+            plot_violin_metric(
+                ga_moo_distance_df,
+                config,
+                problem,
+                final_output_dir,
+                f"$f_1$ Pareto sacrifice to {reference_heuristic}",
+                allowed_algos=moo_heuristics,
+            )
 
             # ---- Collect NaN percentage for Pareto Sacrifice undefined table ----
             sacrifice_col = f"$f_1$ Pareto sacrifice to {reference_heuristic}"
             per_algo_nan = compute_nan_percentage_per_algo(
                 ga_moo_distance_df[ga_moo_distance_df["Used_Representation"].isin(moo_heuristics)],
                 sacrifice_col,
-                moo_heuristics
+                moo_heuristics,
             )
             pareto_sacrifice_nan_stats[problem] = per_algo_nan
 
@@ -737,5 +839,6 @@ def create_plots():
         generate_pareto_sacrifice_undefined_table(pareto_sacrifice_nan_stats, config, moo_heuristics, final_output_dir)
     generate_tuning_tables(tuning_info, config, final_output_dir)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     create_plots()

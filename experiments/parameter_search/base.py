@@ -19,6 +19,7 @@ def _validate_sklearn_metric(metric: str) -> bool:
 def _validate_own_metric(metric: str) -> bool:
     return metric in metrics.__all__
 
+
 def _validate_own_test_metric(metric: Union[str, Callable]) -> bool:
     return metric in ["test_hypervolume", "test_elitist_fitness"]
 
@@ -29,18 +30,19 @@ class ParameterTuner(metaclass=ABCMeta):
     tuning_result_: Bunch
     tuned_params_: dict
 
-    def __init__(self,
-                 estimator: BaseEstimator,
-                 X_train: np.ndarray,
-                 y_train: np.ndarray,
-                 scoring: Union[str, Callable],
-                 n_calls: int = 32,
-                 cv: int = None,
-                 n_jobs_cv: int = None,
-                 n_jobs: int = None,
-                 verbose: int = 0,
-                 random_state: int = None
-                 ):
+    def __init__(
+        self,
+        estimator: BaseEstimator,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        scoring: Union[str, Callable],
+        n_calls: int = 32,
+        cv: int = None,
+        n_jobs_cv: int = None,
+        n_jobs: int = None,
+        verbose: int = 0,
+        random_state: int = None,
+    ):
         self.estimator = estimator
         self.X_train = X_train
         self.y_train = y_train
@@ -56,7 +58,7 @@ class ParameterTuner(metaclass=ABCMeta):
         """The default objective function performs cross-validation and uses the average of the scoring as value."""
 
         estimator = clone(self.estimator)
-        initial_params = {'random_state': self.random_state} | initial_params
+        initial_params = {"random_state": self.random_state} | initial_params
 
         def objective(**params):
             estimator.set_params(**(initial_params | params))
@@ -70,20 +72,20 @@ class ParameterTuner(metaclass=ABCMeta):
                 n_jobs=self.n_jobs_cv,
                 return_estimator=True,
                 verbose=self.verbose,
-                error_score='raise',
+                error_score="raise",
                 return_indices=True,
             )
 
             if _validate_sklearn_metric(self.scoring):
-                score = scores['test_score']
+                score = scores["test_score"]
             elif _validate_own_metric(self.scoring):
-                score = [getattr(metrics, self.scoring)(_estimator) for _estimator in scores['estimator']]
+                score = [getattr(metrics, self.scoring)(_estimator) for _estimator in scores["estimator"]]
             elif _validate_own_test_metric(self.scoring):
                 scores = _moo_hv_pf_from_scores(scores, self.X_train, self.y_train)
                 scores = _soo_fitness_from_scores(scores, self.X_train, self.y_train)
                 score = scores[self.scoring]
             else:
-                raise ValueError(f'invalid scoring metric: {self.scoring}. ')
+                raise ValueError(f"invalid scoring metric: {self.scoring}. ")
 
             return -np.mean(score)
 
@@ -93,7 +95,7 @@ class ParameterTuner(metaclass=ABCMeta):
         return {key: getattr(self, key) for key in keys}
 
     def get_params(self):
-        return self._get_params(['scoring', 'n_calls', 'cv', 'random_state'])
+        return self._get_params(["scoring", "n_calls", "cv", "random_state"])
 
     @abstractmethod
     def __call__(self, parameter_space: dict[str, Any], local_params: dict) -> tuple[dict, Any]:

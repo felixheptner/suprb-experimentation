@@ -28,7 +28,14 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from IPython import embed
-from logging_output_scripts.utils import get_csv_df, get_dataframe, check_and_create_dir, get_all_runs, get_df, get_normalized_df
+from logging_output_scripts.utils import (
+    get_csv_df,
+    get_dataframe,
+    check_and_create_dir,
+    get_all_runs,
+    get_df,
+    get_normalized_df,
+)
 import json
 import math
 
@@ -40,14 +47,12 @@ pd.options.display.max_rows = 2000
 # TODO Store via PGF backend with nicer LaTeXy fonts etc.
 # https://jwalton.info/Matplotlib-latex-PGF/
 # matplotlib.use("pgf")
-sns.set_theme(style="whitegrid",
-              font="Times New Roman",
-              font_scale=0.8,
-              rc={
-                  "lines.linewidth": 1,
-                  "pdf.fonttype": 42,
-                  "ps.fonttype": 42
-              })
+sns.set_theme(
+    style="whitegrid",
+    font="Times New Roman",
+    font_scale=0.8,
+    rc={"lines.linewidth": 1, "pdf.fonttype": 42, "ps.fonttype": 42},
+)
 
 # Add \the\linewidth into the LaTeX file to get this value (it's in pt).
 linewidth = 213.41443
@@ -77,11 +82,11 @@ def load_data(config):
     dfs = []
     keys = []
 
-    for heuristic in config['heuristics']:
+    for heuristic in config["heuristics"]:
         # if config["normalize_datasets"]:
         #     df = get_normalized_df(heuristic)
 
-        for problem in config['datasets']:
+        for problem in config["datasets"]:
             if config["data_directory"] == "mlruns":
                 df = get_df(heuristic, problem)
                 df[mse] *= -1
@@ -116,19 +121,17 @@ def cli():
 
 def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, ylabel=None):
 
-    sns.set_theme(style="whitegrid",
-                  font="Times New Roman",
-                  font_scale=1,
-                  rc={
-                      "lines.linewidth": 1,
-                      "pdf.fonttype": 42,
-                      "ps.fonttype": 42
-                  })
+    sns.set_theme(
+        style="whitegrid",
+        font="Times New Roman",
+        font_scale=1,
+        rc={"lines.linewidth": 1, "pdf.fonttype": 42, "ps.fonttype": 42},
+    )
 
-    with open('logging_output_scripts/config.json') as f:
+    with open("logging_output_scripts/config.json") as f:
         config = json.load(f)
 
-    metrics = {y: x for x, y in config['metrics'].items()}
+    metrics = {y: x for x, y in config["metrics"].items()}
 
     final_output_dir = f"{config['output_directory']}"
     # check_and_create_dir(final_output_dir, "calvo")
@@ -138,18 +141,14 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
 
     # Explore whether throwing away distributional information gives us any
     # insights.
-    variants = ({
+    variants = {
         # Mean/median over cv runs per task (n_tasks problem instances).
-        "mean of":
-        lambda _df: _df[metric].groupby(["algorithm", "task"]).mean().unstack().T,
-        "median of":
-        lambda _df: _df[metric].groupby(["algorithm", "task"]).median().
-        unstack().T,
+        "mean of": lambda _df: _df[metric].groupby(["algorithm", "task"]).mean().unstack().T,
+        "median of": lambda _df: _df[metric].groupby(["algorithm", "task"]).median().unstack().T,
         # Each cv run as a separate problem instance (n_tasks * n_cv_runs problem
         # instances).
-        "all":
-        lambda _df: _df[metric].unstack(0),
-    })
+        "all": lambda _df: _df[metric].unstack(0),
+    }
     # Insight: We don't want to throw away distributional information.
     if not all_variants:
         variants = {"all": variants["all"]}
@@ -191,8 +190,8 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
 
             # NOTE We fix the random seed here to enable model caching.
             model = cmpbayes.Calvo(
-                d.to_numpy(),
-                higher_better=higher_is_better, algorithm_labels=d.columns.to_list()).fit(num_samples=chosen_sample_num, random_seed=1)
+                d.to_numpy(), higher_better=higher_is_better, algorithm_labels=d.columns.to_list()
+            ).fit(num_samples=chosen_sample_num, random_seed=1)
 
             if check_mcmc:
                 smart_print(az.summary(model.infdata_), latex=latex)
@@ -215,20 +214,26 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
 
         if config["normalize_datasets"]:
             heuristic = list(config["heuristics"].keys())[0]
-            f_index = heuristic.find('f:')
-            result = heuristic[f_index+2:]
-            result = result.replace('; -e:', '_')
-            result = result.replace('/', '')
+            f_index = heuristic.find("f:")
+            result = heuristic[f_index + 2 :]
+            result = result.replace("; -e:", "_")
+            result = result.replace("/", "")
 
-            fig.savefig(f"{final_output_dir}/calvo_{result}_{metric}{'' if not small_set else '-small'}.pdf",
-                        dpi=fig.dpi, bbox_inches="tight")
+            fig.savefig(
+                f"{final_output_dir}/calvo_{result}_{metric}{'' if not small_set else '-small'}.pdf",
+                dpi=fig.dpi,
+                bbox_inches="tight",
+            )
         else:
-            fig.savefig(f"{final_output_dir}/calvo_{metric}{'' if not small_set else '-small'}.pdf",
-                        dpi=fig.dpi, bbox_inches="tight")
+            fig.savefig(
+                f"{final_output_dir}/calvo_{metric}{'' if not small_set else '-small'}.pdf",
+                dpi=fig.dpi,
+                bbox_inches="tight",
+            )
 
 
 def ttest(latex, cand1, cand2, cand1_name, cand2_name):
-    with open('logging_output_scripts/config.json') as f:
+    with open("logging_output_scripts/config.json") as f:
         config = json.load(f)
 
     metrics = {y: x for x, y in config["metrics"].items()}
@@ -250,8 +255,12 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
         # fig, ax = plt.subplots(len(config["datasets"]), figsize=(textwidth if metrics[metric] == "MSE" else linewidth, 5), dpi=72)
         # fig, ax = plt.subplots(len(config["datasets"]), figsize=(textwidth, 5), dpi=72)
         num_heuristics = len(config["heuristics"])
-        fig, ax = plt.subplots(nrows=math.ceil(len(config["datasets"])/2), ncols=2,
-                               figsize=(8, 0.75 * math.ceil(len(config["datasets"])/2) * 2), dpi=72)
+        fig, ax = plt.subplots(
+            nrows=math.ceil(len(config["datasets"]) / 2),
+            ncols=2,
+            figsize=(8, 0.75 * math.ceil(len(config["datasets"]) / 2) * 2),
+            dpi=72,
+        )
         ax = ax.ravel()
         for i, task in enumerate(config["datasets"]):
             if metric not in df or (config["data_directory"] == "mlruns_csv/RBML" and metric == elitist_complexity):
@@ -291,9 +300,11 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
             #               f"{metrics[metric].capitalize()}({cand1_name})"))
 
             if not (i == 1 or i == 3):
-                xlabel = (f"MSE({cand2_name}) - MSE({cand1_name})"
-                          if metrics[metric] == "MSE"
-                          else (f"COMP({cand2_name}) - COMP({cand1_name})\n"))
+                xlabel = (
+                    f"MSE({cand2_name}) - MSE({cand1_name})"
+                    if metrics[metric] == "MSE"
+                    else (f"COMP({cand2_name}) - COMP({cand1_name})\n")
+                )
 
                 ylabel = "Density"
             else:
@@ -319,10 +330,24 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
 
             # Add HDI lines and values.
             ax_val.vlines(x=hdi, ymin=-0.1 * max(y), ymax=1.2 * max(y), colors="C1", linestyles="dashed")
-            ax_val.text(x=hdi[0], y=1.3 * max(y), s=round_to_n_sig_figs(hdi[0], 2),
-                        ha="right", va="center", color="C1", fontweight="bold")
-            ax_val.text(x=hdi[1], y=1.3 * max(y), s=round_to_n_sig_figs(hdi[1], 2),
-                        ha="left", va="center", color="C1", fontweight="bold")
+            ax_val.text(
+                x=hdi[0],
+                y=1.3 * max(y),
+                s=round_to_n_sig_figs(hdi[0], 2),
+                ha="right",
+                va="center",
+                color="C1",
+                fontweight="bold",
+            )
+            ax_val.text(
+                x=hdi[1],
+                y=1.3 * max(y),
+                s=round_to_n_sig_figs(hdi[1], 2),
+                ha="left",
+                va="center",
+                color="C1",
+                fontweight="bold",
+            )
 
             ax_val.set_ylim(top=1.2 * max(y))
             if metrics[metric] == "Model Complexity":
@@ -344,10 +369,12 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
                 # Compute probabilities.
                 sample = model.model_.rvs(chosen_sample_num)
 
-                probs[config['datasets'][task]] = {
+                probs[config["datasets"][task]] = {
                     f"p({cand1_name} practically higher complexity)": (sample < rope[0]).sum() / len(sample),
-                    f"p(practically equivalent)": np.logical_and(rope[0] < sample, sample < rope[1]).sum() / len(sample),
-                    f"p({cand2_name} practically higher complexity)": (rope[1] < sample).sum() / len(sample)}
+                    f"p(practically equivalent)": np.logical_and(rope[0] < sample, sample < rope[1]).sum()
+                    / len(sample),
+                    f"p({cand2_name} practically higher complexity)": (rope[1] < sample).sum() / len(sample),
+                }
 
             ax_val.set_ylabel(ylabel, weight="bold")
             ax_val.set_xlabel(xlabel, weight="bold")
@@ -370,15 +397,17 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
                 nname = metrics[metric]
 
             ylabel = "Density"
-            fig.text(0.5, -0.01, xlabel, ha='center')
-            fig.text(0.01, 0.5, ylabel, ha='center', rotation=90)
+            fig.text(0.5, -0.01, xlabel, ha="center")
+            fig.text(0.01, 0.5, ylabel, ha="center", rotation=90)
 
             if len(config["datasets"]) % 2 != 0:
                 ax[-1].set_visible(False)
 
             fig.align_ylabels()
             fig.tight_layout()
-            fig.savefig(f"{final_output_dir}/ttest_{cand1_name}_{cand2_name}_{nname}.pdf", dpi=fig.dpi, bbox_inches="tight")
+            fig.savefig(
+                f"{final_output_dir}/ttest_{cand1_name}_{cand2_name}_{nname}.pdf", dpi=fig.dpi, bbox_inches="tight"
+            )
 
     # https://stackoverflow.com/a/67575847/6936216
     hdis_ = hdis
@@ -399,11 +428,11 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
     hdis = hdis.drop(columns=["bound"])
 
     hdis.columns.names = [None, None]
-    hdis.columns = pd.MultiIndex.from_tuples([(col[0], '') for col in hdis.columns])
+    hdis.columns = pd.MultiIndex.from_tuples([(col[0], "") for col in hdis.columns])
     hdis = hdis.reset_index()
 
     if isinstance(hdis.columns, pd.MultiIndex):
-        hdis.columns = [col[0] if col[1] == '' else f"{col[0]}_{col[1]}" for col in hdis.columns]
+        hdis.columns = [col[0] if col[1] == "" else f"{col[0]}_{col[1]}" for col in hdis.columns]
 
     if hdis["Metric"].nunique(dropna=True) <= 1:
         hdis = hdis.drop(columns="Metric")

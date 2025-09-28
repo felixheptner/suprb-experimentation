@@ -21,19 +21,21 @@ import os
 import matplotlib as mpl
 
 # Set up plot style similar to other scripts in viz directory
-mpl.rcParams.update({
-    "text.usetex": True,
-    "font.family": "serif",
-    "font.serif": ["Computer Modern Roman"],
-    "text.latex.preamble": r"\usepackage{amsmath,amssymb}"
-})
+mpl.rcParams.update(
+    {
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "text.latex.preamble": r"\usepackage{amsmath,amssymb}",
+    }
+)
 
 datasets = {
-    'parkinson_total': "PT",
-    'combined_cycle_power_plant': "CCPP",
-    'concrete_strength': "CS",
-    'airfoil_self_noise': "ASN",
-    'protein_structure': "PPPTS"
+    "parkinson_total": "PT",
+    "combined_cycle_power_plant": "CCPP",
+    "concrete_strength": "CS",
+    "airfoil_self_noise": "ASN",
+    "protein_structure": "PPPTS",
 }
 
 baseline_tuning_parameters = {
@@ -42,43 +44,46 @@ baseline_tuning_parameters = {
         "airfoil_self_noise": 2.19824,
         "concrete_strength": 2.6034,
         "protein_structure": 2.6043,
-        "parkinson_total": 4.2419
+        "parkinson_total": 4.2419,
     },
     "alpha_init": {
         "combined_cycle_power_plant": 0.0537,
         "airfoil_self_noise": 0.0349,
         "concrete_strength": 0.0585,
         "protein_structure": 0.0257,
-        "parkinson_total": 0.0126
+        "parkinson_total": 0.0126,
     },
     "Crossover_Operator": {
         "combined_cycle_power_plant": "Uniform",
         "airfoil_self_noise": "NPoint",
         "concrete_strength": "NPoint",
         "protein_structure": "Uniform",
-        "parkinson_total": "Uniform"
+        "parkinson_total": "Uniform",
     },
     "n_crossover": {
         "combined_cycle_power_plant": None,
         "airfoil_self_noise": 1,
         "concrete_strength": 1,
         "protein_structure": None,
-        "parkinson_total": None
+        "parkinson_total": None,
     },
     "sc_sigma_mutation": {
         "combined_cycle_power_plant": 0.0076,
         "airfoil_self_noise": 0.0098,
         "concrete_strength": 0.0079,
         "protein_structure": 0.0067,
-        "parkinson_total": 0.0154
-    }
+        "parkinson_total": 0.0154,
+    },
 }
+
 
 def load_dataset(name: str, **kwargs) -> tuple[np.ndarray, np.ndarray]:
     method_name = f"load_{name}"
     from problems import datasets
+
     if hasattr(datasets, method_name):
         return getattr(datasets, method_name)(**kwargs)
+
 
 if __name__ == "__main__":
     random_state = 42
