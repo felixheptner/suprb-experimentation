@@ -17,7 +17,7 @@ saga_datasets = {
     "concrete_strength": "Concrete Strength",
     # "energy_cool": "Energy Efficiency Cooling",
     "protein_structure": "Physiochemical Properties of Protein Tertiary Structure",
-    # "parkinson_total": "Parkinson's Telemonitoring"
+    "parkinson_total": "Parkinson's Telemonitoring"
 }
 
 datasets_no_pppts = {
