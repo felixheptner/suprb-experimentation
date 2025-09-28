@@ -21,7 +21,7 @@ saga_datasets = {
 }
 
 datasets_no_pppts = {
-    "combined_cycle_power_plant": "Combined Cycle Power Plant",git
+    "combined_cycle_power_plant": "Combined Cycle Power Plant",
     "airfoil_self_noise": "Airfoil Self-Noise",
     "concrete_strength": "Concrete Strength",
     "parkinson_total": "Parkinson's Telemonitoring"
