@@ -24,6 +24,8 @@ ga_baselines = {
     "Baseline c:ga64": ("+", "green"),
 }
 
+max_rule_pool_size = 128
+
 # Mapping raw parameter keys to nicer LaTeX display names
 PARAM_NAME_MAP = {
     "rule_discovery__mutation__sigma": "\\acs{RD} $\\sigma_{mut}$",
@@ -48,11 +50,11 @@ def _esc_tex(s: str) -> str:
     return str(s).replace("_", r"\_")
 
 
-def f_1_pareto_sacrifice(moo_front: np.ndarray, ga_front: np.ndarray) -> float:
+def c_pareto_sacrifice(moo_front: np.ndarray, ga_front: np.ndarray) -> float:
     """
-    Compute the f_1 distance from the one GA solution to the solution along the MOO Pareto front with the minimum
-    f_1 value whose f2 value is smaller than the GA solution's f_2 value. If no MOO solution has f_2 smaller than the GA solution's f_2,
-    choose the MOO solution with the smallest f_2.
+    Compute the c distance from the one GA solution to the solution along the MOO Pareto front with the minimum
+    c value whose f2 value is smaller than the GA solution's e value. If no MOO solution has e smaller than the GA solution's e,
+    choose the MOO solution with the smallest e.
     """
     if len(moo_front) == 0 or len(ga_front) == 0:
         return np.nan
@@ -61,11 +63,29 @@ def f_1_pareto_sacrifice(moo_front: np.ndarray, ga_front: np.ndarray) -> float:
     # Filter MOO front to only those with f2 less than ga_f2
     filtered_moo = moo_front[moo_front[:, 1] <= ga_f2]
     if len(filtered_moo) == 0:
-        closest_moo = moo_front[np.argmin(moo_front[:, 1])]
         return np.nan
     else:
         closest_moo = filtered_moo[np.argmin(filtered_moo[:, 0])]
-        return closest_moo[0] - ga_sol[0]
+        return (closest_moo[0] - ga_sol[0]) * max_rule_pool_size
+
+
+def e_pareto_sacrifice(moo_front: np.ndarray, ga_front: np.ndarray) -> float:
+    """
+    Compute the e distance from the one GA solution to the solution along the MOO Pareto front with the minimum
+    e value whose f1 value is smaller than the GA solution's c value. If no MOO solution has c smaller than the GA solution's c,
+    choose the MOO solution with the smallest c.
+    """
+    if len(moo_front) == 0 or len(ga_front) == 0:
+        return np.nan
+    ga_sol = ga_front[0]
+    ga_f1 = ga_sol[0]
+    # Filter MOO front to only those with f1 less than ga_f1
+    filtered_moo = moo_front[moo_front[:, 0] <= ga_f1]
+    if len(filtered_moo) == 0:
+        return np.nan
+    else:
+        closest_moo = filtered_moo[np.argmin(filtered_moo[:, 1])]
+        return closest_moo[1] - ga_sol[1]
 
 
 def generate_pareto_sacrifice_undefined_table(
@@ -75,17 +95,15 @@ def generate_pareto_sacrifice_undefined_table(
     final_output_dir: str,
 ) -> None:
     """
-    One LaTeX table: rows=datasets, cols=moo_algos, values=\% of NaNs in $f_1$ Pareto sacrifice
+    One LaTeX table: rows=datasets, cols=moo_algos, values=\% of NaNs in $c$ Pareto sacrifice
     """
-    os.makedirs(final_output_dir, exist_ok=True)
+    # Ensure tables directory (top-level, no 'supplementary' folder)
+    tables_dir = os.path.join(final_output_dir, "tables")
+    os.makedirs(tables_dir, exist_ok=True)
     header = ["Dataset"] + moo_algos
     col_format = "l" + "c" * len(moo_algos)
 
     lines = [
-        r"\begin{table}[ht]",
-        r"\centering",
-        r"\caption{Percentage of \textit{Pareto Sacrifice undefined} (NaN) per algorithm and dataset.}",
-        r"\label{tab:pareto_sacrifice_undefined_" + "".join(moo_algos).lower() + "}",
         r"\begin{tabular}{" + col_format + r"}",
         r"\hline",
         " & ".join([_esc_tex(h) for h in header]) + r" \\",
@@ -102,9 +120,9 @@ def generate_pareto_sacrifice_undefined_table(
             cell = "N/A" if v is None or np.isnan(v) else f"{v:.1f}~\\%"
             row_vals.append(cell)
         lines.append(ds_name + " & " + " & ".join(row_vals) + r" \\")
-    lines += [r"\hline", r"\end{tabular}", r"\end{table}"]
+    lines += [r"\hline", r"\end{tabular}"]
 
-    out_path = os.path.join(final_output_dir, "pareto_sacrifice_undefined.tex")
+    out_path = os.path.join(tables_dir, "pareto_sacrifice_undefined.tex")
     with open(out_path, "w") as f:
         f.write("\n".join(lines))
 
@@ -118,7 +136,9 @@ def generate_tuning_tables(
     Columns: union of all parameter names observed for that heuristic across datasets.
     Missing values are filled with N/A.
     """
-    os.makedirs(final_output_dir, exist_ok=True)
+    # Write tuning tables into top-level tables dir (no 'supplementary')
+    tables_dir = os.path.join(final_output_dir, "tables")
+    os.makedirs(tables_dir, exist_ok=True)
     heuristic_display_map = config["heuristics"]
 
     # Collect all heuristic keys encountered
@@ -174,7 +194,7 @@ def generate_tuning_tables(
 
         content = "\n".join(lines)
         file_safe = display_name.lower().replace(" ", "_")
-        out_path = os.path.join(final_output_dir, f"{file_safe}_tuned_params.tex")
+        out_path = os.path.join(tables_dir, f"{file_safe}_tuned_params.tex")
         with open(out_path, "w") as f:
             f.write(content)
 
@@ -338,25 +358,37 @@ def plot_hexbin(
         String identifier to add to plot title and filename (e.g., "test", "train")
     """
     fig_hex, axes_hex = plt.subplots(
-        n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True, sharey=True, constrained_layout=True, squeeze=False
+        n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows), sharex=True, sharey=True, constrained_layout=True, squeeze=False
     )
 
     # Add plot_type to title if it's not "test" (for backward compatibility)
     display_title = f"{title}" if plot_type == "test" else f"{title} ({plot_type.capitalize()})"
     fig_hex.suptitle(display_title)
 
+    hb_list = []  # collect hexbin artists so we can unify their scale afterwards
+    gridsize = 30
+
     for i, algo in enumerate(moo_heuristics):
+        # Guard against empty arrays
+        data = pareto_solutions.get(algo, np.array([]))
+        if data is None or data.size == 0:
+            # Leave axis empty but labeled
+            axes_hex[i % n_rows, i // n_rows].set_title(f"{algo}")
+            axes_hex[i % n_rows, i // n_rows].set_xlabel("$f_1$")
+            continue
+
         algo_df = pd.DataFrame(
             {"Normed Complexity": pareto_solutions[algo][:, 0], "Pseudo Accuracy": pareto_solutions[algo][:, 1]}
         )
         hb = axes_hex[i % n_rows, i // n_rows].hexbin(
             algo_df["Normed Complexity"],
             algo_df["Pseudo Accuracy"],
-            gridsize=30,
+            gridsize=gridsize,
             cmap="Blues" if plot_type == "test" else "Oranges",
-            extent=(0, 1, 0, 1),
+            extent=(0, 1, 0, 1) if len(moo_heuristics) != 1 else None,
             mincnt=1,
         )
+        hb_list.append(hb)
         axes_hex[i % n_rows, i // n_rows].set_title(f"{algo}")
         # Plot SOO comparison points
         for soo_algo, value in soo_averages.items():
@@ -382,100 +414,27 @@ def plot_hexbin(
                 alpha=0.2,
             )
         axes_hex[i % n_rows, i // n_rows].legend(fontsize=14, loc="upper right")
-        axes_hex[i % n_rows, i // n_rows].set_xlabel("$f_1$")
-        fig_hex.colorbar(hb, ax=axes_hex[i % n_rows, i // n_rows], label="Density")
-    fig_hex.supylabel("$f_2$")
+        axes_hex[i % n_rows, i // n_rows].set_xlabel("$c$")
 
-    # Create filename based on plot_type
+    # Ensure a common density scale across all hexbins and add single colorbar at the far right
+    if hb_list:
+        global_max = max([hb.get_array().max() if hb.get_array().size > 0 else 0 for hb in hb_list])
+        for hb in hb_list:
+            hb.set_clim(0, global_max)
+        try:
+            fig_hex.colorbar(hb_list[-1], ax=axes_hex.ravel().tolist(), label="Density", location="right")
+        except TypeError:
+            # Some matplotlib versions don't accept 'location' or extra kwargs for Figure.colorbar
+            fig_hex.colorbar(hb_list[-1], ax=axes_hex.ravel().tolist(), label="Density")
+
+    fig_hex.supylabel("$e$")
+
+    # Create filename based on plot_type and save into final_output_dir/figures/hexbin (no 'supplementary')
     filename = f"{dataset_key}_hex{'' if plot_type == 'test' else '_' + plot_type}.png"
-    fig_hex.savefig(f"{final_output_dir}/{filename}")
+    hex_dir = os.path.join(final_output_dir, "figures", "hexbin")
+    os.makedirs(hex_dir, exist_ok=True)
+    fig_hex.savefig(os.path.join(hex_dir, filename))
     plt.close(fig_hex)
-
-
-def plot_mean_shift_arrows(
-    moo_heuristics: List[str],
-    train_pareto_solutions: Dict[str, np.ndarray],
-    test_pareto_solutions: Dict[str, np.ndarray],
-    n_cols: int,
-    n_rows: int,
-    title: str,
-    final_output_dir: str,
-    dataset_key: str,
-    n_bins: int = 20,
-) -> None:
-    """
-    Plot mean shift arrows of f1 between training and test per f0 bin.
-    Scatter + arrows are centered at the bin midpoint.
-    """
-    fig, axes = plt.subplots(
-        n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True, sharey=True, constrained_layout=True, squeeze=False
-    )
-    fig.suptitle(f"{title} (Mean shift arrows)")
-
-    for i, algo in enumerate(moo_heuristics):
-        ax = axes[i // n_cols, i % n_cols]
-        train = train_pareto_solutions[algo]
-        test = test_pareto_solutions[algo]
-
-        if train.shape[0] == 0 or test.shape[0] == 0:
-            ax.set_title(f"{algo} (no data)")
-            continue
-
-        f0 = train[:, 0]
-        f1_train = train[:, 1]
-        f1_test = test[:, 1]
-
-        bins = np.linspace(f0.min(), f0.max(), n_bins + 1)
-        bin_indices = np.digitize(f0, bins) - 1
-
-        arrow_data = []
-        for j in range(n_bins):
-            mask = bin_indices == j
-            if np.any(mask):
-                bin_center = (bins[j] + bins[j + 1]) / 2
-                mean_train = f1_train[mask].mean()
-                mean_test = f1_test[mask].mean()
-                arrow_data.append((bin_center, mean_train, mean_test))
-
-        for bin_center, mean_train, mean_test in arrow_data:
-            ax.arrow(
-                bin_center,
-                mean_train,
-                0,
-                mean_test - mean_train,
-                head_width=0.01,
-                head_length=0.01,
-                length_includes_head=True,
-                color="steelblue",
-                alpha=0.8,
-            )
-        ax.scatter(
-            [d[0] for d in arrow_data],
-            [d[1] for d in arrow_data],
-            label="fTrain mean $f_1$",
-            color="blue",
-            marker="o",
-            s=30,
-        )
-        ax.scatter(
-            [d[0] for d in arrow_data],
-            [d[2] for d in arrow_data],
-            label="Test mean $f_1$",
-            color="red",
-            marker="x",
-            s=40,
-        )
-
-        ax.set_title(f"{algo}")
-        ax.set_xlim(0, 1)
-        ax.set_ylim(0, 1)
-        ax.legend(fontsize=10)
-
-    fig.supxlabel("$f_0$")
-    fig.supylabel("$f_1$")
-    filename = f"{dataset_key}_mean_shift.png"
-    fig.savefig(f"{final_output_dir}/{filename}")
-    plt.close(fig)
 
 
 def plot_hist(
@@ -488,7 +447,7 @@ def plot_hist(
     dataset_key: str,
 ) -> None:
     fig_hist, axes_hist = plt.subplots(
-        n_rows, n_cols, figsize=(18, 5 * n_rows), sharex=True, sharey=True, constrained_layout=True, squeeze=False
+        n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows), sharex=True, sharey=True, constrained_layout=True, squeeze=False
     )
     fig_hist.suptitle(title)
     for i, algo in enumerate(moo_heuristics):
@@ -497,12 +456,15 @@ def plot_hist(
             continue
         max_length = max(pf_lengths)
         axes_hist[i // n_cols, i % n_cols].hist(
-            pf_lengths, bins=np.arange(1, max(33, max_length + 1)), align="left", rwidth=0.9
+            pf_lengths, bins=np.arange(1, max(33, max_length + 1)), align="right", rwidth=0.9
         )
         axes_hist[i // n_cols, i % n_cols].set_title(f"{algo}")
         axes_hist[i // n_cols, i % n_cols].set_xlabel(f"Cardinalities")
     fig_hist.supylabel("# of Pareto fronts")
-    fig_hist.savefig((f"{final_output_dir}/{dataset_key}_hist.png"))
+    # Save into final_output_dir/figures/histograms (no 'supplementary')
+    hist_dir = os.path.join(final_output_dir, "figures", "histograms")
+    os.makedirs(hist_dir, exist_ok=True)
+    fig_hist.savefig(os.path.join(hist_dir, f"{dataset_key}_hist.png"))
     plt.close(fig_hist)
 
 
@@ -552,7 +514,10 @@ def plot_iterations_hv(
         else:
             print(f"Skipping regression line for {algo} due to insufficient data or constant X.")
         axes_ithv[i].set_title(f"{algo}")
-    fig_ithv.savefig(f"{final_output_dir}/{dataset_key}_ithv.png")
+    # Save into final_output_dir/figures/iterations_hv (no 'supplementary')
+    ithv_dir = os.path.join(final_output_dir, "figures", "iterations_hv")
+    os.makedirs(ithv_dir, exist_ok=True)
+    fig_ithv.savefig(os.path.join(ithv_dir, f"{dataset_key}_ithv.png"))
     plt.close(fig_ithv)  # Close fig_ithv, not fig_kde
 
 
@@ -568,16 +533,19 @@ def compute_metric_dataframe(
     return pd.DataFrame(m_rows)
 
 
-def compute_ga_comparison_dataframe(pareto_fronts: Dict[str, List[List]], ref_name: str):
-    m_rows = []
+def compute_pareto_sacrifices_dataframes(pareto_fronts: Dict[str, List[List]], ref_name: str):
+    c_rows = []
+    e_rows = []
     ref_fronts = pareto_fronts[ref_name]
     for algo in pareto_fronts.keys():
         for idx, front in enumerate(pareto_fronts[algo]):
             front_np = np.array(front)
             ref_front_np = np.array(ref_fronts[idx])
-            m = f_1_pareto_sacrifice(front_np, ref_front_np)
-            m_rows.append({"Used_Representation": algo, f"$f_1$ Pareto sacrifice to {ref_name}": m})
-    return pd.DataFrame(m_rows)
+            c_ps = c_pareto_sacrifice(front_np, ref_front_np)
+            e_ps = e_pareto_sacrifice(front_np, ref_front_np)
+            c_rows.append({"Used_Representation": algo, f"$c$-Pareto sacrifice": c_ps})
+            e_rows.append({"Used_Representation": algo, f"$e$-Pareto sacrifice": e_ps})
+    return pd.DataFrame(c_rows), pd.DataFrame(e_rows)
 
 
 def plot_violin_metric(
@@ -616,16 +584,132 @@ def plot_violin_metric(
     num_ticks = 7
     y_tick_positions = np.linspace(y_min, y_max, num_ticks)
     if y_min <= 0 <= y_max:
-
-        y_tick_positions = np.concat([y_tick_positions, [0]])
+        # include zero explicitly
+        y_tick_positions = np.unique(np.concatenate([y_tick_positions, [0.0]]))
     y_tick_positions = np.round(y_tick_positions, 3)
     ax_violin.set_ylim(y_min, y_max)
     ax_violin.set_yticks(y_tick_positions)
     ax_violin.set_yticklabels([f"{x:.3g}" for x in y_tick_positions])
     plt.xticks(rotation=15, ha="right", fontsize=12)
     plt.tight_layout()
-    fig_violin.savefig(f"{final_output_dir}/{datasets_map[problem]}_violin_{name}.png")
+    # Save into final_output_dir/figures/violins (sanitize name) — removed 'supplementary'
+    violin_dir = os.path.join(final_output_dir, "figures", "violins")
+    os.makedirs(violin_dir, exist_ok=True)
+    safe_name = re.sub(r"[^\w\-_\. ]", "", name).replace(" ", "_")
+    fig_violin.savefig(os.path.join(violin_dir, f"{datasets_map[problem]}_violin_{safe_name}.png"))
     plt.close(fig_violin)
+
+
+def plot_swarm_box_metric(
+    metric_df: pd.DataFrame,
+    cfg: Dict[str, Any],
+    problem: str,
+    final_output_dir: str,
+    name: str,
+    allowed_algos: List[str] | None = None,
+) -> None:
+    """
+    Boxplot (summary) with overlaid swarmplot (raw points) per algorithm.
+    Saves to final_output_dir/figures/swarm.
+    """
+    # Filter to only MOO heuristics if provided
+    if allowed_algos is not None:
+        metric_df = metric_df[metric_df["Used_Representation"].isin(allowed_algos)]
+
+    # Drop NaNs in the plotted column
+    metric_df = metric_df[metric_df[name].notna()]
+
+    fig_swarm, ax_swarm = plt.subplots(dpi=400)
+    plt.subplots_adjust(left=0.2, right=0.95, top=0.92, bottom=0.22)
+
+    # Draw boxplot first (transparent face; summary under swarm points)
+    sns.boxplot(
+        data=metric_df,
+        x="Used_Representation",
+        y=name,
+        ax=ax_swarm,
+        width=0.5,
+        showfliers=False,
+        boxprops={"facecolor": "none", "edgecolor": "black", "linewidth": 1.5},
+        medianprops={"color": "black", "linewidth": 2},
+        whiskerprops={"linewidth": 1.5},
+        capprops={"linewidth": 1.5},
+    )
+    # Overlay swarmplot
+    sns.swarmplot(
+        data=metric_df,
+        x="Used_Representation",
+        y=name,
+        ax=ax_swarm,
+        hue="Used_Representation",
+        palette="tab10",
+        dodge=False,
+        size=3,
+        alpha=0.8,
+        legend=False,
+    )
+
+    ax_swarm.set_title(f"{cfg['datasets'][problem]}", style="italic", fontsize=14)
+    ax_swarm.set_ylabel(name, fontsize=18, weight="bold")
+    ax_swarm.set_xlabel("")
+    ax_swarm.tick_params(axis="x", rotation=15)
+
+    # Determine y-range from the actual data when available
+    y_vals = metric_df[name].dropna().to_numpy() if name in metric_df.columns else np.array([])
+    if y_vals.size > 0:
+        y_vals = y_vals[np.isfinite(y_vals)]
+    if y_vals.size == 0:
+        y_min = min(ax_swarm.get_yticks())
+        y_max = max(ax_swarm.get_yticks())
+    else:
+        y_min = float(np.min(y_vals))
+        y_max = float(np.max(y_vals))
+
+    # Add a small padding unless the range is zero
+    pad = (y_max - y_min) * 0.05 if y_max > y_min else 0.5
+    y_min -= pad
+    y_max += pad
+
+    num_ticks = 7
+
+    # Detect integer-like data (within rounding tolerance)
+    all_integer = False
+    if y_vals.size > 0:
+        all_integer = bool(np.all(np.isclose(y_vals, np.round(y_vals))))
+
+    # Build tick positions, always ensuring equal spacing and including 0 if it's in the data range
+    if all_integer:
+        y_min_int = int(np.floor(y_min))
+        y_max_int = int(np.ceil(y_max))
+        span = max(1, y_max_int - y_min_int)
+        n_ticks = min(num_ticks, span + 1)
+        step = max(1, int(np.ceil(span / (n_ticks - 1))))
+        y_tick_positions = np.arange(y_min_int, y_max_int + 1, step)
+        # If 0 lies in the original data range but isn't in ticks, recompute evenly spaced integer ticks that include 0
+        if y_vals.size > 0 and np.min(y_vals) <= 0 <= np.max(y_vals) and 0 not in y_tick_positions:
+            y_tick_positions = np.linspace(y_min_int, y_max_int, n_ticks, dtype=int)
+    else:
+        y_tick_positions = np.linspace(y_min, y_max, num_ticks)
+        if y_vals.size > 0 and np.min(y_vals) <= 0 <= np.max(y_vals) and 0 not in y_tick_positions:
+            y_tick_positions = np.linspace(min(y_min, 0.0), max(y_max, 0.0), num_ticks)
+
+    y_tick_positions = np.unique(np.round(y_tick_positions, 6))
+
+    ax_swarm.set_ylim(y_min, y_max)
+    ax_swarm.set_yticks(y_tick_positions)
+    if all_integer:
+        ax_swarm.set_yticklabels([str(int(x)) for x in y_tick_positions])
+    else:
+        ax_swarm.set_yticklabels([f"{x:.3g}" for x in y_tick_positions])
+
+    plt.xticks(rotation=15, ha="right", fontsize=12)
+    plt.tight_layout()
+
+    swarm_dir = os.path.join(final_output_dir, "figures", "swarm")
+    os.makedirs(swarm_dir, exist_ok=True)
+    safe_name = re.sub(r"[^\w\-_\. ]", "", name).replace(" ", "_")
+    fig_swarm.savefig(os.path.join(swarm_dir, f"{datasets_map[problem]}_swarm_{safe_name}.png"))
+    plt.close(fig_swarm)
 
 
 def prepare_reference_stats(
@@ -673,6 +757,85 @@ def compute_nan_percentage_per_algo(
         n_nans = int(sub[value_col].isna().sum())
         out[algo] = 100.0 * n_nans / float(total)
     return out
+
+
+def plot_sampled_pareto_with_refs(
+    algo_name: str,
+    pareto_fronts: Dict[str, List[List]],
+    reference_fronts: Dict[str, List[List]],
+    ref_display_name: str,
+    dataset_title: str,
+    final_output_dir: str,
+    dataset_key: str,
+    plot_type: str = "test",
+) -> None:
+    """
+    Plot 8 sampled Pareto fronts (indices: 0, 7, 15, 23, 31, 39, 47, 55) for a single algorithm and
+    overlay the corresponding GA reference elitist (single point) in the same color with a different marker.
+
+    Saves to: final_output_dir/figures/pareto_samples
+    """
+    # Guard: ensure data exists
+    fronts = pareto_fronts.get(algo_name, [])
+    ref_fronts_list = reference_fronts.get(ref_display_name, [])
+    if not fronts or not ref_fronts_list:
+        return
+
+    sample_indices = [0, 7, 15, 23, 31, 39, 47, 55]
+    # Bound indices by available fronts
+    sample_indices = [i for i in sample_indices if i < len(fronts) and i < len(ref_fronts_list)]
+    if len(sample_indices) == 0:
+        return
+
+    # Prepare figure (2x4 grid)
+    n_samples = len(sample_indices)
+    n_cols = 4
+    n_rows = 2
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4.2 * n_cols, 4.2 * n_rows), sharex=True, sharey=True, constrained_layout=True, squeeze=False)
+    axes = np.array(axes).reshape(n_rows, n_cols)
+    fig.suptitle(f"{dataset_title} — {algo_name} ({plot_type.capitalize()})")
+
+    # Color cycle
+    palette = sns.color_palette("tab10", n_samples)
+
+    for k, idx in enumerate(sample_indices):
+        ax = axes[k // n_cols, k % n_cols]
+        color = palette[k % len(palette)]
+
+        # Extract current Pareto front and corresponding GA reference front
+        pf = np.array(fronts[idx])
+        ref_pf = np.array(ref_fronts_list[idx])
+
+        # Plot Pareto front as line/scatter in color
+        if pf.size > 0:
+            ax.plot(pf[:, 0], pf[:, 1], "-", color=color, linewidth=1.5, label=f"PF {k + 1}")
+            ax.scatter(pf[:, 0], pf[:, 1], s=12, color=color)
+
+        # Plot single GA elitist point (first item of reference PF) with distinct marker in same color
+        if ref_pf.size > 0:
+            elitist = ref_pf[0]  # assume first item is the elitist point
+            ax.scatter(elitist[0], elitist[1], s=50, marker="X", color=color, edgecolor="black", linewidth=0.8, label=f"SOO Elitist {k + 1}")
+
+        ax.set_title(f"Seed $s_{k + 1}$")
+        ax.set_xlabel("$c$")
+        ax.set_ylabel("$e$")
+
+        # Bound axes to [0,1] if data suggests that domain (light guard)
+        ax.set_xlim(0, 0.5)
+        ax.set_ylim(0, 1)
+
+        # Add per-subplot legend (show PF and GA for this run)
+        handles, labels = ax.get_legend_handles_labels()
+        if handles:
+            ax.legend(handles, labels, fontsize=14, loc="upper right")
+
+    # Save
+    out_dir = os.path.join(final_output_dir, "figures", "pareto_samples")
+    os.makedirs(out_dir, exist_ok=True)
+    fname = f"{dataset_key}_{algo_name.replace(' ', '_')}_samples_{plot_type}.png"
+    fig.tight_layout()
+    fig.savefig(os.path.join(out_dir, fname))
+    plt.close(fig)
 
 
 def create_plots():
@@ -760,7 +923,7 @@ def create_plots():
         n_algs = len(moo_heuristics)
         n_cols, n_rows = determine_layout(n_algs)
         dataset_key = datasets_map[problem]
-        dataset_title = config["datasets"][problem]
+        dataset_title = config["datasets"][problem] + " (" +  dataset_key.upper() + ")"
 
         # Plots
         plot_hexbin(
@@ -787,17 +950,32 @@ def create_plots():
             dataset_key,
             plot_type="train",
         )
-        plot_mean_shift_arrows(
-            moo_heuristics,
-            train_pareto_solutions,
-            test_pareto_solutions,
-            n_cols,
-            n_rows,
-            dataset_title,
-            final_output_dir,
-            dataset_key,
-            n_bins=25,
-        )
+
+        # New: sampled Pareto fronts with GA reference elitists (same color, different marker)
+        if len(config["reference_heuristics"]) > 0:
+            ref_display_name = config["reference_heuristics"][list(config["reference_heuristics"].keys())[0]]
+            for algo in moo_heuristics:
+                plot_sampled_pareto_with_refs(
+                    algo,
+                    test_pareto_fronts,
+                    test_pareto_fronts,  # GA reference fronts are stored under reference_heuristics display name
+                    ref_display_name,
+                    dataset_title,
+                    final_output_dir,
+                    dataset_key,
+                    plot_type="test",
+                )
+                plot_sampled_pareto_with_refs(
+                    algo,
+                    train_pareto_fronts,
+                    train_pareto_fronts,
+                    ref_display_name,
+                    dataset_title,
+                    final_output_dir,
+                    dataset_key,
+                    plot_type="train",
+                )
+
         plot_hist(moo_heuristics, train_pareto_fronts, n_cols, n_rows, dataset_title, final_output_dir, dataset_key)
         plot_iterations_hv(res_var, moo_heuristics, final_output_dir, dataset_key, dataset_title)
 
@@ -806,29 +984,57 @@ def create_plots():
         # Metrics (filtered to only MOO heuristics in plots)
         spread_df = compute_metric_dataframe(train_pareto_fronts, metric_spread, "Spread")
         plot_violin_metric(spread_df, config, problem, final_output_dir, "Spread", allowed_algos=moo_heuristics)
+        plot_swarm_box_metric(spread_df, config, problem, final_output_dir, "Spread", allowed_algos=moo_heuristics)
 
         hv_df = compute_metric_dataframe(
             test_pareto_fronts, metric_hypervolume, "Test Hypervolume", reference_point=np.array([1.0, 1.0])
         )
         plot_violin_metric(hv_df, config, problem, final_output_dir, "Test Hypervolume", allowed_algos=moo_heuristics)
+        plot_swarm_box_metric(hv_df, config, problem, final_output_dir, "Test Hypervolume", allowed_algos=moo_heuristics)
 
         if len(config["reference_heuristics"]) > 0:
             reference_heuristic = config["reference_heuristics"][list(config["reference_heuristics"].keys())[0]]
-            ga_moo_distance_df = compute_ga_comparison_dataframe(test_pareto_fronts, reference_heuristic)
+            c_ps, e_ps = compute_pareto_sacrifices_dataframes(test_pareto_fronts, reference_heuristic)
+
 
             plot_violin_metric(
-                ga_moo_distance_df,
+                c_ps,
                 config,
                 problem,
                 final_output_dir,
-                f"$f_1$ Pareto sacrifice to {reference_heuristic}",
+                f"$c$-Pareto sacrifice",
+                allowed_algos=moo_heuristics,
+            )
+            plot_swarm_box_metric(
+                c_ps,
+                config,
+                problem,
+                final_output_dir,
+                f"$c$-Pareto sacrifice",
+                allowed_algos=moo_heuristics,
+            )
+
+            plot_violin_metric(
+                e_ps,
+                config,
+                problem,
+                final_output_dir,
+                f"$e$-Pareto sacrifice",
+                allowed_algos=moo_heuristics,
+            )
+            plot_swarm_box_metric(
+                e_ps,
+                config,
+                problem,
+                final_output_dir,
+                f"$e$-Pareto sacrifice",
                 allowed_algos=moo_heuristics,
             )
 
             # ---- Collect NaN percentage for Pareto Sacrifice undefined table ----
-            sacrifice_col = f"$f_1$ Pareto sacrifice to {reference_heuristic}"
+            sacrifice_col = f"$c$-Pareto sacrifice"
             per_algo_nan = compute_nan_percentage_per_algo(
-                ga_moo_distance_df[ga_moo_distance_df["Used_Representation"].isin(moo_heuristics)],
+                c_ps[c_ps["Used_Representation"].isin(moo_heuristics)],
                 sacrifice_col,
                 moo_heuristics,
             )
