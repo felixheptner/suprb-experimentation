@@ -1,6 +1,6 @@
 # SupRB experimentation for SupRB MOO Solution Composition
 
-This repository contains the code used to tune, train and evaluate Multi Objective Solution Composition in SupRB.
+This repository contains the code used to tune, train, and evaluate Multi Objective Solution Composition in SupRB.
 It also contains the code to generate the graphs and tables for the paper "Exploring Multi-Objective Optimization to Balance
 Performance and Complexity in Explainable Machine
 Learning".
