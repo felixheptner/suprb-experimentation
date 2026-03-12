@@ -137,8 +137,8 @@ def generate_tuning_tables(
     Missing values are filled with N/A.
     """
     # Write tuning tables into top-level tables dir (no 'supplementary')
-    tables_dir = os.path.join(final_output_dir, "tables")
-    os.makedirs(tables_dir, exist_ok=True)
+    tuning_dir = os.path.join(final_output_dir, "tables/tuning_results")
+    os.makedirs(tuning_dir, exist_ok=True)
     heuristic_display_map = config["heuristics"]
 
     # Collect all heuristic keys encountered
@@ -194,7 +194,7 @@ def generate_tuning_tables(
 
         content = "\n".join(lines)
         file_safe = display_name.lower().replace(" ", "_")
-        out_path = os.path.join(tables_dir, f"{file_safe}_tuned_params.tex")
+        out_path = os.path.join(tuning_dir, f"{file_safe}_tuned_params.tex")
         with open(out_path, "w") as f:
             f.write(content)
 

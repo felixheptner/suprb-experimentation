@@ -71,14 +71,14 @@ ga_baseline_more_tuning = {
 
 moo_baseline = {
     "Baseline nsga2": "NSGA-II",
-    "Baseline nsga3": "NSGA-III",
+    "Baseline nsga3": "U-NSGA-III",
     "Baseline spea2": "SPEA2",
 }
 
 spea2_only = {"Baseline spea2": "SPEA2"}
 
 test = {
-    "Test nsga3": "NSGA-III",
+    "Test nsga3": "U-NSGA-III",
     "Test spea2": "SPEA2"
 }
 
@@ -98,15 +98,15 @@ moo_sampler_equi_proj = {
 moo_early_base_comp = {
     "Baseline nsga2": "NSGA-II",
     "Early Stopping nsga2": "NSGA-II HT",
-    "Baseline nsga3": "NSGA-III",
-    "Early Stopping nsga3": "NSGA-III HT",
+    "Baseline nsga3": "U-NSGA-III",
+    "Early Stopping nsga3": "U-NSGA-III HT",
     "Baseline spea2": "SPEA2",
     "Early Stopping spea2": "SPEA2 HT",
 }
 
 moo_early_no_base = {
     "Early Stopping nsga2": "NSGA-II HT",
-    "Early Stopping nsga3": "NSGA-III HT",
+    "Early Stopping nsga3": "U-NSGA-III HT",
     "Early Stopping spea2": "SPEA2 HT",
 }
 
@@ -172,20 +172,20 @@ def run_main():
         all_runs_df = mlflow.search_runs(search_all_experiments=True)
         filter_runs(all_runs_df)
 
-    if setting[0] == "diss-graphs/graphs/MOO":
+    if setting[0] == "diss-graphs/graphs/MOO-baseline":
         cohens_pairwise_d([("Baseline nsga2", "Baseline spea2"), ("Baseline nsga2", "Baseline nsga3"), ("Baseline nsga3", "Baseline spea2")],
-                          ["NSGA-II - SPEA2", "NSGA-II - NSGA-III", "NSGA-III - SPEA2"])
+                          ["NSGA-II - SPEA2", "NSGA-II - U-NSGA-III", "U-NSGA-III - SPEA2"])
 
         ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline spea2", cand1_name="NSGA-II", cand2_name="SPEA2")
-        ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline nsga3", cand1_name="NSGA-II", cand2_name="NSGA-III")
+        ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline nsga3", cand1_name="NSGA-II", cand2_name="U-NSGA-III")
 
-        ttest(latex=True, cand1="Baseline nsga3", cand2="Baseline spea2", cand1_name="NSGA-III", cand2_name="SPEA2")
+        ttest(latex=True, cand1="Baseline nsga3", cand2="Baseline spea2", cand1_name="U-NSGA-III", cand2_name="SPEA2")
 
-    if setting[0] == "diss-graphs/graphs/EARLY":
+    if setting[0] == "diss-graphs/graphs/HT-comparison":
         cohens_pairwise_d([("Baseline nsga2", "Early Stopping nsga2"), ("Baseline spea2", "Early Stopping spea2"), ("Early Stopping nsga2", "Early Stopping spea2")],
                           ["NSGA-II - NSGA-II HT", "SPEA2 - SPEA2 HT", "NSGA-II HT - SPEA2 HT"])
         ttest(latex=True, cand1="Baseline nsga2", cand2="Early Stopping nsga2", cand1_name="NSGA-II", cand2_name="NSGA-II HT")
-        ttest(latex=True, cand1="Baseline nsga3", cand2="Early Stopping nsga3", cand1_name="NSGA-III", cand2_name="NSGA-III HT")
+        ttest(latex=True, cand1="Baseline nsga3", cand2="Early Stopping nsga3", cand1_name="U-NSGA-III", cand2_name="U-NSGA-III HT")
         ttest(latex=True, cand1="Baseline spea2", cand2="Early Stopping spea2", cand1_name="SPEA2", cand2_name="SPEA2 HT")
 
         ttest(latex=True, cand1="Early Stopping nsga2", cand2="Early Stopping spea2", cand1_name="NSGA-II HT", cand2_name="SPEA2 HT")
@@ -210,8 +210,8 @@ def run_main():
         ttest(latex=True, cand1="Baseline spea2", cand2="PopComp spea2 c:128", cand1_name="$N = 32$",
               cand2_name="$N = 128$")
 
-    # if len(config["heuristics"]) > 1:
-    #     calvo(ylabel=setting[2])
+    if len(config["heuristics"]) > 1:
+        calvo(ylabel=setting[2])
 
     moo_plots.create_plots()
 
@@ -221,15 +221,15 @@ def run_main():
 
 if __name__ == '__main__':
     ga_base = ["diss-graphs/graphs/GA_BASELINE", ga_baseline, "Solution Composition", False, "mlruns_csv/GA_BASELINE"]
-    moo_algos = ["diss-graphs/graphs/MOO", moo_baseline, "Configuration", False, "mlruns_csv/MOO",
+    moo_algos = ["diss-graphs/graphs/MOO-baseline", moo_baseline, "Configuration", False, "mlruns_csv/MOO",
                  ga_baseline_more_tuning]
     moo_sampler_all = ["diss-graphs/graphs/SAMPLER_ALL", moo_sampler_all, "Configuration", False,
                        "mlruns_csv/SAMPLER_ALL"]
     moo_sampler_equi_proj = ["diss-graphs/graphs/SAMPLER_EQUI_PROJ", moo_sampler_equi_proj, "Configuration", False,
                              "mlruns_csv/SAMPLER_EQUI_PROJ"]
-    moo_early_base_comp = ["diss-graphs/graphs/EARLY", moo_early_base_comp, "Configuration", False, "mlruns_csv/EARLY",
+    moo_early_base_comp = ["diss-graphs/graphs/HT-comparison", moo_early_base_comp, "Configuration", False, "mlruns_csv/EARLY",
                            ga_baseline_more_tuning]
-    moo_early_no_base = ["diss-graphs/graphs/EARLY_NO_BASE", moo_early_no_base, "Configuration", False,
+    moo_early_no_base = ["diss-graphs/graphs/HT-only", moo_early_no_base, "Configuration", False,
                          "mlruns_csv/EARLY_NO_BASE", ga_baseline_more_tuning]
     moo_early_nsga2_spea2 = ["diss-graphs/graphs/EARLY_NO_BASE_NSGA2_SPEA2", moo_early_nsga2_spea2, "Configuration",
                              False, "mlruns_csv/EARLY_NO_BASE_NSGA2_SPEA2", ga_baseline_more_tuning]
@@ -248,8 +248,8 @@ if __name__ == '__main__':
     # setting = moo_algos  # Check
     # setting = moo_sampler_all                 # Check
     # setting = moo_sampler_equi_proj           # Check
-    setting = moo_early_base_comp             # Check
-    # setting = moo_early_no_base               # Check
+    # setting = moo_early_base_comp             # Check
+    setting = moo_early_no_base               # Check
     # setting = moo_early_nsga2_spea2
     # setting = moo_early_only_spea2            # Check
     # setting = moo_ts_all                      # Check
