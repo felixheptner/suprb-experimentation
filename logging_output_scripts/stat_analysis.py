@@ -18,6 +18,7 @@
 import subprocess
 import sys
 from functools import partial
+from typing import List, Tuple
 
 import arviz as az
 import click
@@ -36,8 +37,11 @@ from logging_output_scripts.utils import (
     get_df,
     get_normalized_df,
 )
+import itertools
 import json
 import math
+from utils import datasets_map
+
 
 pd.options.display.max_rows = 2000
 # If this doesn't work, because you can't fine Time New Roman as a font do the following:
@@ -231,6 +235,110 @@ def calvo(latex=False, all_variants=False, check_mcmc=False, small_set=False, yl
                 bbox_inches="tight",
             )
 
+def cohens_pairwise_d(candidate_pairs: List[Tuple[str, str]], candidate_pair_names: List[str]) -> None:
+    """
+    Compute dependent-samples Cohen's d for given algorithm pairs across
+    all datasets and metrics and print/save LaTeX tables.
+
+    Parameters
+    ----------
+    candidate_pairs : List[Tuple[str, str]]
+        List of pairs of algorithm ids (as used in the config / df index),
+        e.g. [("Baseline c:ga32", "Baseline c:ga64"), ...].
+    candidate_pair_names : List[str]
+        List of human-readable names for each pair, in the same order as
+        candidate_pairs, e.g. ["GA32 - GA64", ...].
+    """
+    # Basic sanity check
+    if len(candidate_pairs) != len(candidate_pair_names):
+        raise ValueError("candidate_pairs and candidate_pair_names must have the same length.")
+
+    with open("logging_output_scripts/config.json") as f:
+        config = json.load(f)
+
+    metrics = {y: x for x, y in config["metrics"].items()}
+
+    final_output_dir = f"{config['output_directory']}"
+    df = load_data(config)
+
+    pd.options.mode.chained_assignment = None
+
+    # Ensure target directory for LaTeX tables exists
+    cohens_dir = f"{final_output_dir}/tables/cohens_d"
+    check_and_create_dir(final_output_dir, "tables")
+    check_and_create_dir(f"{final_output_dir}/tables", "cohens_d")
+
+    # For each metric we build a single DataFrame:
+    # index = datasets, columns = candidate_pair_names
+    for metric in metrics:
+        comb_labels = list(candidate_pair_names)
+        table_rows = []
+
+        for task_key, _ in config["datasets"].items():
+            task_name = datasets_map[task_key].upper()
+
+            # Preload all y-values for algorithms that appear in any pair
+            alg_ids = {alg for pair in candidate_pairs for alg in pair}
+            y_values = {
+                alg: df[metric].loc[alg, task_key].to_numpy()
+                for alg in alg_ids
+            }
+
+            row_vals = []
+            for (alg1, alg2) in candidate_pairs:
+                y1 = y_values[alg1]
+                y2 = y_values[alg2]
+                # dependent-samples Cohen's d_z: mean(diff) / sd(diff)
+                diff = y1 - y2
+                d_z = diff.mean() / diff.std(ddof=1)
+                row_vals.append(d_z)
+
+            table_rows.append((task_name, row_vals))
+
+        if not table_rows:
+            continue
+
+        # Build DataFrame: rows = datasets, columns = name combinations
+        data = {
+            comb_labels[k]: [row[1][k] for row in table_rows]
+            for k in range(len(comb_labels))
+        }
+        index = [row[0] for row in table_rows]
+        d_table = pd.DataFrame(data, index=index)
+
+        d_table.index.name = "Datasets"
+        d_table = d_table.round(3)
+
+        latex_str = d_table.to_latex(
+            index=True,
+            index_names=False,
+            escape=False,
+            float_format="%.3f".__mod__,
+        )
+
+        # Adjust column layout placeholder; length depends on number of pairs
+        # Here we just replace 'lrrr' with 'l' + 'c' * n_pairs, if present.
+        old_layout = "\\begin{tabular}{l" + "r" * len(comb_labels) + "}"
+        new_layout = "\\begin{tabular}{l" + "c" * len(comb_labels) + "}"
+        latex_str = latex_str.replace(old_layout, new_layout, 1)
+
+        latex_str = latex_str.replace(
+            "\\toprule\n & ",
+            "\\toprule\nDatasets & ",
+            1,
+        )
+
+        print(f"% Cohen's d (dependent) for metric: {metrics[metric]}")
+        print(latex_str)
+        print()
+
+        safe_metric = metrics[metric].replace(" ", "_").replace("/", "_")
+        out_path = f"{cohens_dir}/cohens_d_{safe_metric}.tex"
+        with open(out_path, "w") as f_out:
+            f_out.write("% Automatically generated Cohen's d table\n")
+            f_out.write(f"% Metric: {metrics[metric]}\n\n")
+            f_out.write(latex_str)
+    return
 
 def ttest(latex, cand1, cand2, cand1_name, cand2_name):
     with open("logging_output_scripts/config.json") as f:
@@ -378,7 +486,6 @@ def ttest(latex, cand1, cand2, cand1_name, cand2_name):
 
             ax_val.set_ylabel(ylabel, weight="bold")
             ax_val.set_xlabel(xlabel, weight="bold")
-
             fig.tight_layout()
 
             nname = "mse" if metric == "metrics.test_neg_mean_squared_error" else "complexity"
