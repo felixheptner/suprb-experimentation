@@ -21,7 +21,7 @@
 JOB_DIR=/home/$USER/data/oc-compute03/suprb-experimentation
 export PYTHONPATH="${PYTHONPATH}:${JOB_DIR}"
 EXPERIMENT="runs/moo_sc/baseline_tuning/simple_moo_tuning.py"
-OPTIMIZER="nsga2"
+OPTIMIZER="moead"
 CONFIG=""
 # ---------------------------------------------------------------------------
 # 2. Map array‑task ID → dataset name
