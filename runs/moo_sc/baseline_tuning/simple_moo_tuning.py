@@ -20,7 +20,7 @@ from suprb import rule, SupRB
 from suprb.logging.combination import CombinedLogger
 from suprb.logging.multi_objective import MOLogger
 from suprb.logging.stdout import StdoutLogger
-from suprb.optimizer.solution import nsga2, nsga3, spea2
+from suprb.optimizer.solution import nsga2, nsga3, spea2, moead
 from suprb.optimizer.rule import es, origin, mutation
 from suprb.solution.initialization import RandomInit
 import suprb.solution.mixing_model as mixing_model
@@ -32,6 +32,7 @@ opt_dict = {
     "nsga2": nsga2.NonDominatedSortingGeneticAlgorithm2,
     "nsga3": nsga3.NonDominatedSortingGeneticAlgorithm3,
     "spea2": spea2.StrengthParetoEvolutionaryAlgorithm2,
+    "moead": moead.MultiObjectiveEvolutionaryAlgorithmBasedOnDecomposition,
 }
 
 
@@ -154,7 +155,35 @@ def run(problem: str, job_id: str, optimizer: str):
             "solution_composition__mutation_rate", 0, 0.1
         )
 
-    space_dict = {"nsga2": suprb_ES_NSGA2_space, "nsga3": suprb_ES_NSGA3_space, "spea2": suprb_ES_SPEA2_space}
+    @param_space()
+    def suprb_ES_MOEAD_space(trial: Trial, params: Bunch):
+        # ES
+        sigma_space = [0, np.sqrt(X.shape[1])]
+
+        params.rule_discovery__mutation__sigma = trial.suggest_float("rule_discovery__mutation__sigma", *sigma_space)
+        params.rule_discovery__init__fitness__alpha = trial.suggest_float(
+            "rule_discovery__init__fitness__alpha", 0.01, 0.2
+        )
+
+        # SC
+        params.solution_composition__crossover = trial.suggest_categorical(
+            "solution_composition__crossover", ["NPoint", "Uniform"]
+        )
+        params.solution_composition__crossover = getattr(nsga2.crossover, params.solution_composition__crossover)()
+
+        if isinstance(params.solution_composition__crossover, nsga2.crossover.NPoint):
+            params.solution_composition__crossover__n = trial.suggest_int("solution_composition__crossover__n", 1, 10)
+
+        params.solution_composition__mutation__mutation_rate = trial.suggest_float(
+            "solution_composition__mutation_rate", 0, 0.1
+        )
+
+    space_dict = {
+        "nsga2": suprb_ES_NSGA2_space,
+        "nsga3": suprb_ES_NSGA3_space,
+        "spea2": suprb_ES_SPEA2_space,
+        "moead": suprb_ES_MOEAD_space,
+    }
 
     experiment_name = f"Baseline {optimizer} j:{job_id} p:{problem}"
     print(experiment_name)
