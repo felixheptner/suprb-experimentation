@@ -17,6 +17,7 @@ from experiments.parameter_search.optuna import OptunaTuner
 from problems import scale_X_y
 
 from suprb import rule, SupRB
+from suprb.optimizer.solution import nsga2, nsga3, spea2, moead
 from suprb.logging.combination import CombinedLogger
 from suprb.logging.multi_objective import MOLogger
 from suprb.logging.stdout import StdoutLogger
