@@ -32,7 +32,7 @@ opt_dict = {
     "nsga2": nsga2.NonDominatedSortingGeneticAlgorithm2,
     "nsga3": nsga3.NonDominatedSortingGeneticAlgorithm3,
     "spea2": spea2.StrengthParetoEvolutionaryAlgorithm2,
-    "moead": moead.MultiObjectiveEvolutionaryAlgorithmBasedOnDecomposition,
+    "moead": moead.MultiObjectiveEvolutionaryAlgorithmDecomposition,
 }
 
 
