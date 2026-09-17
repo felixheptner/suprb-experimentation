@@ -33,6 +33,7 @@ opt_dict = {
     "nsga3": nsga3.NonDominatedSortingGeneticAlgorithm3,
     "spea2": spea2.StrengthParetoEvolutionaryAlgorithm2,
     "moead": moead.MultiObjectiveEvolutionaryAlgorithmDecomposition,
+    "archive_moead": moead.MultiObjectiveEvolutionaryAlgorithmDecompositionAdaptive,
 }
 
 
@@ -54,7 +55,7 @@ def run(problem: str, job_id: str, optimizer: str):
     X, y = load_dataset(name=problem, return_X_y=True)
     X, y = scale_X_y(X, y)
     X, y = shuffle(X, y, random_state=random_state)
-
+    sc_opt = opt_dict[optimizer](n_iter=32, population_size=32) if not optimizer == "archive_moead" else opt_dict[optimizer](n_iter=32, population_size=32, use_archive=True)
     estimator = SupRB(
         rule_discovery=es.ES1xLambda(
             operator="&",
@@ -66,7 +67,7 @@ def run(problem: str, job_id: str, optimizer: str):
             mutation=mutation.HalfnormIncrease(),
             origin_generation=origin.SquaredError(),
         ),
-        solution_composition=opt_dict[optimizer](n_iter=32, population_size=32),
+        solution_composition=sc_opt,
         n_iter=32,
         n_rules=4,
         verbose=10,
