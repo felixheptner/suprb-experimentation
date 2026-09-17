@@ -184,6 +184,7 @@ def run(problem: str, job_id: str, optimizer: str):
         "nsga3": suprb_ES_NSGA3_space,
         "spea2": suprb_ES_SPEA2_space,
         "moead": suprb_ES_MOEAD_space,
+        "archive_moead": suprb_ES_MOEAD_space,
     }
 
     experiment_name = f"Baseline {optimizer} j:{job_id} p:{problem}"
