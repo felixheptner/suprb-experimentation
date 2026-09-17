@@ -199,7 +199,7 @@ def generate_tuning_tables(
         lines += [r"\hline", r"\end{tabular}}", r"\end{table}"]
 
         content = "\n".join(lines)
-        file_safe = display_name.lower().replace(" ", "_")
+        file_safe = display_name.lower().replace(" ", "_").replace("/", "_")
         out_path = os.path.join(tuning_dir, f"{file_safe}_tuned_params.tex")
         with open(out_path, "w") as f:
             f.write(content)
@@ -601,7 +601,7 @@ def plot_violin_metric(
     # Save into final_output_dir/figures/violins (sanitize name) — removed 'supplementary'
     violin_dir = os.path.join(final_output_dir, "figures", "violins")
     os.makedirs(violin_dir, exist_ok=True)
-    safe_name = re.sub(r"[^\w\-_\. ]", "", name).replace(" ", "_")
+    safe_name = re.sub(r"[^\w\-_\. ]", "", name).replace(" ", "_").replace("/", "_")
     fig_violin.savefig(os.path.join(violin_dir, f"{datasets_map[problem]}_violin_{safe_name}.png"))
     plt.close(fig_violin)
 
@@ -713,7 +713,7 @@ def plot_swarm_box_metric(
 
     swarm_dir = os.path.join(final_output_dir, "figures", "swarm")
     os.makedirs(swarm_dir, exist_ok=True)
-    safe_name = re.sub(r"[^\w\-_\. ]", "", name).replace(" ", "_")
+    safe_name = re.sub(r"[^\w\-_\. ]", "", name).replace(" ", "_").replace("/", "_")
     fig_swarm.savefig(os.path.join(swarm_dir, f"{datasets_map[problem]}_swarm_{safe_name}.png"))
     plt.close(fig_swarm)
 
@@ -838,7 +838,11 @@ def plot_sampled_pareto_with_refs(
     # Save
     out_dir = os.path.join(final_output_dir, "figures", "pareto_samples")
     os.makedirs(out_dir, exist_ok=True)
-    fname = f"{dataset_key}_{algo_name.replace(' ', '_')}_samples_{plot_type}.png"
+    
+    fname = f"{dataset_key}_{algo_name
+                             .replace(' ', '_')
+                             .replace('/', '_')
+                             }_samples_{plot_type}.png"
     fig.tight_layout()
     fig.savefig(os.path.join(out_dir, fname))
     plt.close(fig)

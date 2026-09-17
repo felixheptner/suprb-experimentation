@@ -6,10 +6,9 @@ import mlflow
 import numpy as np
 import time
 
-from logging_output_scripts import violin_and_swarm_plots
-from logging_output_scripts import moo_plots
-from logging_output_scripts.stat_analysis import calvo, ttest, cohens_pairwise_d
-from logging_output_scripts.utils import filter_runs
+import moo_plots
+from stat_analysis import calvo, ttest, cohens_pairwise_d
+from utils import filter_runs
 
 saga_datasets = {
     "combined_cycle_power_plant": "Combined Cycle Power Plant",
@@ -73,6 +72,7 @@ moo_baseline = {
     "Baseline nsga2": "NSGA-II",
     "Baseline nsga3": "U-NSGA-III",
     "Baseline spea2": "SPEA2",
+    "Baseline moead": "MOEA/D",
 }
 
 spea2_only = {"Baseline spea2": "SPEA2"}
@@ -102,12 +102,15 @@ moo_early_base_comp = {
     "Early Stopping nsga3": "U-NSGA-III HT",
     "Baseline spea2": "SPEA2",
     "Early Stopping spea2": "SPEA2 HT",
+    "Baseline moead": "MOEA/D",
+    "Early Stopping moead": "MOEA/D HT",
 }
 
 moo_early_no_base = {
     "Early Stopping nsga2": "NSGA-II HT",
     "Early Stopping nsga3": "U-NSGA-III HT",
     "Early Stopping spea2": "SPEA2 HT",
+    "Early Stopping moead": "MOEA/D HT",
 }
 
 moo_early_nsga2_spea2 = {
@@ -172,9 +175,9 @@ def run_main():
         all_runs_df = mlflow.search_runs(search_all_experiments=True)
         filter_runs(all_runs_df)
 
-    if setting[0] == "diss-graphs/graphs/MOO-baseline":
+    if setting[0] == "diss-graphs/graphs/MOO-baseline" and False:
         cohens_pairwise_d([("Baseline nsga2", "Baseline spea2"), ("Baseline nsga2", "Baseline nsga3"), ("Baseline nsga3", "Baseline spea2")],
-                          ["NSGA-II - SPEA2", "NSGA-II - U-NSGA-III", "U-NSGA-III - SPEA2"])
+                          ["NSGA-II - SPEA2", "NSGA-II - U-NSGA-III", "U-NSGA-III - SPEA2"]) # TODO Why does this not work
 
         ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline spea2", cand1_name="NSGA-II", cand2_name="SPEA2")
         ttest(latex=True, cand1="Baseline nsga2", cand2="Baseline nsga3", cand1_name="NSGA-II", cand2_name="U-NSGA-III")
@@ -248,8 +251,8 @@ if __name__ == '__main__':
     # setting = moo_algos  # Check
     # setting = moo_sampler_all                 # Check
     # setting = moo_sampler_equi_proj           # Check
-    # setting = moo_early_base_comp             # Check
-    setting = moo_early_no_base               # Check
+    setting = moo_early_base_comp             # Check
+    # setting = moo_early_no_base               # Check
     # setting = moo_early_nsga2_spea2
     # setting = moo_early_only_spea2            # Check
     # setting = moo_ts_all                      # Check
